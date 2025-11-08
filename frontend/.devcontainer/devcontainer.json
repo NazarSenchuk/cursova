@@ -1,0 +1,19 @@
+{
+  "name": "React Dev Container",
+  "dockerFile": "Dockerfile",
+  "context": "..",
+  "appPort": [3000],
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "npm install",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-tslint-plugin",
+    "xabikos.javascriptsnippets"
+  ],
+  "forwardPorts": [3000],
+  "remoteUser": "root"
+}

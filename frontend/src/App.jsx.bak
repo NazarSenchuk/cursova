@@ -1,0 +1,155 @@
+import React, { useState, useEffect } from 'react';
+import ImageUpload from './components/ImageUpload';
+import ImageGallery from './components/ImageGallery';
+import ImageEditor from './components/ImageEditor';
+import AdminPanel from './components/AdminPanel';
+import Reports from './components/Reports';
+import { mockApi } from './services/mockApi';
+import './App.css';
+
+function App() {
+  const [images, setImages] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [processedImages, setProcessedImages] = useState([]);
+  const [activeTab, setActiveTab] = useState('gallery');
+
+  useEffect(() => {
+    loadImages();
+    loadProcessedImages();
+  }, []);
+
+  const loadImages = async () => {
+    const imagesData = await mockApi.getImages();
+    setImages(imagesData);
+  };
+
+  const loadProcessedImages = async () => {
+    const processedData = await mockApi.getProcessedImages();
+    setProcessedImages(processedData);
+  };
+
+  const handleImageUploaded = (newImage) => {
+    setImages(prev => [newImage, ...prev]);
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    if (window.confirm('Видалити це зображення?')) {
+      await mockApi.deleteImage(imageId);
+      setImages(prev => prev.filter(img => img.id !== imageId));
+      if (selectedImage && selectedImage.id === imageId) {
+        setSelectedImage(null);
+      }
+    }
+  };
+
+  const handleProcessingComplete = (result) => {
+    setProcessedImages(prev => [result, ...prev]);
+  };
+
+  return (
+    <div className="App">
+      <header style={styles.header}>
+        <h1 style={styles.title}>Фототека - Система обробки зображень</h1>
+        <nav style={styles.nav}>
+          <button
+            style={{...styles.navButton, ...(activeTab === 'gallery' && styles.activeNavButton)}}
+            onClick={() => setActiveTab('gallery')}
+          >
+            Галерея
+          </button>
+          <button
+            style={{...styles.navButton, ...(activeTab === 'editor' && styles.activeNavButton)}}
+            onClick={() => setActiveTab('editor')}
+          >
+            Редактор
+          </button>
+          <button
+            style={{...styles.navButton, ...(activeTab === 'admin' && styles.activeNavButton)}}
+            onClick={() => setActiveTab('admin')}
+          >
+            Адмін
+          </button>
+          <button
+            style={{...styles.navButton, ...(activeTab === 'reports' && styles.activeNavButton)}}
+            onClick={() => setActiveTab('reports')}
+          >
+            Звіти
+          </button>
+        </nav>
+      </header>
+
+      <main style={styles.main}>
+        {activeTab === 'gallery' && (
+          <>
+            <ImageUpload onImageUploaded={handleImageUploaded} />
+            <ImageGallery
+              images={images}
+              onImageSelect={setSelectedImage}
+              onDeleteImage={handleDeleteImage}
+            />
+          </>
+        )}
+
+        {activeTab === 'editor' && (
+          <ImageEditor
+            selectedImage={selectedImage}
+            onProcessingComplete={handleProcessingComplete}
+          />
+        )}
+
+        {activeTab === 'admin' && <AdminPanel />}
+
+        {activeTab === 'reports' && <Reports />}
+      </main>
+
+      <footer style={styles.footer}>
+        <p>Фототека System © 2024 | Mock API Demo</p>
+      </footer>
+    </div>
+  );
+}
+
+const styles = {
+  header: {
+    backgroundColor: '#343a40',
+    color: 'white',
+    padding: '1rem 2rem',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  },
+  title: {
+    margin: '0 0 1rem 0',
+    fontSize: '1.5rem'
+  },
+  nav: {
+    display: 'flex',
+    gap: '10px'
+  },
+  navButton: {
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    color: 'white',
+    border: '1px solid white',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
+  activeNavButton: {
+    backgroundColor: '#007bff',
+    borderColor: '#007bff'
+  },
+  main: {
+    padding: '2rem',
+    minHeight: 'calc(100vh - 120px)',
+    backgroundColor: '#f8f9fa'
+  },
+  footer: {
+    backgroundColor: '#343a40',
+    color: 'white',
+    textAlign: 'center',
+    padding: '1rem',
+    position: 'relative',
+    bottom: 0,
+    width: '100%'
+  }
+};
+
+export default App;
