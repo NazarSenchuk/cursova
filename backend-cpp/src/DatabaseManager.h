@@ -20,7 +20,6 @@ private:
     
 public:
     DatabaseManager(const DatabaseConfig& db_config);
-    ~DatabaseManager();
     
     bool connect();
     bool isConnected() const;

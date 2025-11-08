@@ -8,11 +8,7 @@ DatabaseManager::DatabaseManager(const DatabaseConfig& db_config)
     : config(db_config) {
 }
 
-DatabaseManager::~DatabaseManager() {
-    if (connection && connection->is_open()) {
-        connection->close();
-    }
-}
+
 
 bool DatabaseManager::connect() {
     try {
