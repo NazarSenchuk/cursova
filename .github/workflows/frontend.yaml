@@ -2,6 +2,7 @@ name: Frontend
 
 on:
   push:
+    
     paths:
       - 'frontend/**'
   workflow_dispatch:

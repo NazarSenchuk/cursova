@@ -24,6 +24,14 @@ RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git /works
     cmake .. -DBUILD_ONLY="s3" -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTING=OFF && \
     make -j$(nproc) && make install
 
+
+RUN git clone https://github.com/CrowCpp/Crow.git /workspace/crow && \
+    cd /workspace/crow && \
+    mkdir build && cd build && \
+    cmake .. -DCROW_BUILD_EXAMPLES=OFF -DCROW_BUILD_TESTS=OFF && \
+    make install
+
+
 # Build your backend
 COPY . /workspace/backend-cpp
 WORKDIR /workspace/backend-cpp

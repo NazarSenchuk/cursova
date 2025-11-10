@@ -14,12 +14,7 @@ set(AWSSDK_ROOT_DIR "/usr/local/")
 
 # === Find AWS SDK (only S3) ===
 find_package(AWSSDK REQUIRED COMPONENTS s3)
-
-# === Include directories ===
-include_directories(
-    ${CMAKE_SOURCE_DIR}/third_party/crow/include
-    ${CMAKE_SOURCE_DIR}/third_party/libpqxx/include
-)
+find_package(Crow REQUIRED)
 
 # === Source files ===
 file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
@@ -44,6 +39,7 @@ target_link_libraries(backend
 target_link_libraries(backend
     pqxx
     pq
+    Crow::Crow
 )
 
 # === Output directory ===
