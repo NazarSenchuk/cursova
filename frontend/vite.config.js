@@ -8,12 +8,15 @@ export default defineConfig({
     loader: 'jsx',
   },
   server: {
-    port: 3000,
-    host: true // дозволяє доступ з інших пристроїв в мережі
-  },
+    port: 8080,
+    strictPort: true,
+    host: true,
+    origin: "http://0.0.0.0:8080",
+   },
   preview: {
-    port: 3000
-  },
+    port: 8080,
+    strictPort: true,
+   },
   optimizeDeps: {
     esbuildOptions: {
       loader: {
