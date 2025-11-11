@@ -4,7 +4,7 @@ import ImageGallery from './components/ImageGallery.jsx';
 import ImageEditor from './components/ImageEditor.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import Reports from './components/Reports.jsx';
-import { mockApi } from './services/mockApi';
+import { Api } from './services/Api'; // Changed from mockApi to Api
 import './App.css';
 
 function App() {
@@ -19,12 +19,12 @@ function App() {
   }, []);
 
   const loadImages = async () => {
-    const imagesData = await mockApi.getImages();
+    const imagesData = await Api.getImages(); // Changed to Api
     setImages(imagesData);
   };
 
   const loadProcessedImages = async () => {
-    const processedData = await mockApi.getProcessedImages();
+    const processedData = await Api.getProcessedImages(); // Changed to Api
     setProcessedImages(processedData);
   };
 
@@ -34,7 +34,7 @@ function App() {
 
   const handleDeleteImage = async (imageId) => {
     if (window.confirm('Видалити це зображення?')) {
-      await mockApi.deleteImage(imageId);
+      await Api.deleteImage(imageId); // Changed to Api
       setImages(prev => prev.filter(img => img.id !== imageId));
       if (selectedImage && selectedImage.id === imageId) {
         setSelectedImage(null);
@@ -103,7 +103,7 @@ function App() {
       </main>
 
       <footer style={styles.footer}>
-        <p>Фототека System © 2024 | Mock API Demo</p>
+        <p>Фототека System © 2024 | API Demo</p>
       </footer>
     </div>
   );

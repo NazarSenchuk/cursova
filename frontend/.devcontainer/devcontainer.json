@@ -15,5 +15,6 @@
     "xabikos.javascriptsnippets"
   ],
   "forwardPorts": [3000],
-  "remoteUser": "root"
+  "remoteUser": "root",
+  "runArgs": ["--network=host"]
 }

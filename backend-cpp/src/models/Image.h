@@ -11,6 +11,7 @@ public:
     std::string description;
     std::string filename;
     std::string original_path;
+    std::string processed_path;
     std::string status;  // "pending", "processing", "completed", "error"
     std::string error_message;
     std::string created_at;
@@ -19,7 +20,7 @@ public:
     
     // Конструктор для нових зображень
     Image(const std::string& name, const std::string& description,
-             const std::string& filename, const std::string& url);
+             const std::string& filename, const std::string& url , const std::string& processed_path  ,const std::string& status );
     std::string toJson() const;
     
     // Заповнення з результату запиту

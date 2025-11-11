@@ -8,15 +8,15 @@ Image::Image()
 }
 
 Image::Image(const std::string& name, const std::string& description,
-             const std::string& filename, const std::string& url)
+             const std::string& filename, const std::string& url ,const std::string& processed_path  ,const std::string& status )
     : id(-1), name(name), description(description), filename(filename),
-      original_path(url), status("pending") {}
+      original_path(url), processed_path(url) , status(status) {}
 
 void Image::fromPgResult(const pqxx::row& row) {
     id = row["id"].as<int>();
     filename = row["filename"].as<std::string>();
     original_path = row["original_path"].as<std::string>();
-    
+    processed_path = row["processed_path"].as<std::string>();
     status = row["status"].as<std::string>();
     
     if (!row["error_message"].is_null()) {
@@ -35,6 +35,7 @@ std::string Image::toJson() const {
          << "\"id\":" << id << ","
          << "\"filename\":\"" << filename << "\","
          << "\"original_path\":\"" << original_path << "\","
+         << "\"processed_path\":\"" << processed_path << "\","
          << "\"status\":\"" << status << "\","
          << "\"error_message\":\"" << error_message << "\","
          << "\"created_at\":\"" << created_at << "\","

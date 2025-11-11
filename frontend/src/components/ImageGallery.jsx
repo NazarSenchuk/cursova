@@ -15,12 +15,12 @@ const ImageGallery = ({ images, onImageSelect, onDeleteImage }) => {
         <div key={image.id} style={styles.imageCard}>
           <img
             src={image.url}
-            alt={image.filename}
+            alt={image.name}
             style={styles.image}
             onClick={() => onImageSelect(image)}
           />
           <div style={styles.imageInfo}>
-            <span style={styles.filename}>{image.filename}</span>
+            <span style={styles.filename}>{image.name}</span>
             <button
               onClick={() => onDeleteImage(image.id)}
               style={styles.deleteButton}

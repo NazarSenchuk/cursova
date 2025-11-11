@@ -3,7 +3,7 @@ FROM node:22-bullseye
 
 # Set working directory
 WORKDIR /workspace
-
+COPY . .
 # Install any extra tools (optional)
 RUN apt-get update && apt-get install -y \
     git \

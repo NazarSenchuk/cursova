@@ -5,68 +5,81 @@
 #include <iostream>
 #include <algorithm>
 
-ImageController::ImageController(DatabaseManager& db ,  R2Manager& r2_manager)
+ImageController::ImageController(DatabaseManager& db, R2Manager& r2_manager)
     : db_manager(db), r2_manager(r2_manager) {
-    
-    
 }
 
-
 crow::response ImageController::uploadImage(const crow::request& req) {
+    std::cout << "=== Початок оброблення фото ===" << std::endl;
     try {
+        
         // Parse multipart form data
         crow::multipart::message msg(req);
         
-        // Extract form fields
+       
+
         std::string name = msg.get_part_by_name("name").body;
+        std::cout << "   Name: " << name << std::endl;
+
         std::string description = msg.get_part_by_name("description").body;
-        
-        // Extract file
+        std::cout << "   Description: " << description << std::endl;
+
         auto file_part = msg.get_part_by_name("file");
         auto content_disposition = file_part.get_header_object("Content-Disposition");
+        std::cout << "   Content-Disposition: " << content_disposition.value << std::endl;
         
-        // Safely extract filename from const params map
+        // Safely extract filename
         std::string filename;
         auto it = content_disposition.params.find("filename");
         if (it != content_disposition.params.end()) {
             filename = it->second;
+            std::cout << "   Filename: " << filename << std::endl;
         } else {
+            std::cout << "   ERROR: No filename found" << std::endl;
             return crow::response(400, "No filename provided");
         }
         
-        // ADD THIS LINE - Extract the actual file data
+        // Extract file data
         std::string file_data = file_part.body;
-        
-        if (!isValidImageFormat(filename)) {
+                if (!isValidImageFormat(filename)) {
+            std::cout << "   ERROR: Invalid image format" << std::endl;
             return crow::response(400, "Invalid image format");
         }
-        
-        // Upload to R2
+        std::cout << "Загружаємо фото на S3" << std::endl;
         std::string url = r2_manager.uploadImageToR2(filename, file_data);
         if (url.empty()) {
+            std::cout << "   ERROR: R2 upload failed" << std::endl;
             return crow::response(500, "Failed to upload image to R2");
         }
+        std::cout << "   R2 URL: " << url << std::endl;
         
-        // Create DB record
-        Image new_image(name, description, filename, url);
+        std::cout << "Загружаємо метадані в базу даних" << std::endl;
+        Image new_image(name, description, filename, url, "", "uploaded");
         int image_id = db_manager.createImage(new_image);
         
         if (image_id == -1) {
+            std::cout << "   ERROR: Database creation failed" << std::endl;
             return crow::response(500, "Database error");
         }
         
-        crow::json::wvalue response;
+        std::cout << "Фото збережене " << image_id << std::endl;
+        
+        crow::json::wvalue response; 
         response["id"] = image_id;
         response["filename"] = filename;
-        response["status"] = "pending";
-        
+        response["status"] = "pending";        
         return crow::response(201, response);
         
     } catch (const std::exception& e) {
+        std::cout << "=== UPLOAD IMAGE EXCEPTION ===" << std::endl;
+        std::cout << "Exception: " << e.what() << std::endl;
+        std::cout << "Exception type: " << typeid(e).name() << std::endl;
         return crow::response(500, std::string("Upload error: ") + e.what());
+    } catch (...) {
+        std::cout << "=== UPLOAD IMAGE UNKNOWN EXCEPTION ===" << std::endl;
+        return crow::response(500, "Unknown upload error");
     }
 }
-
 crow::response ImageController::getAllImages(const crow::request& req) {
     try {
         auto images = db_manager.getAllImages();
@@ -78,7 +91,8 @@ crow::response ImageController::getAllImages(const crow::request& req) {
         for (const auto& image : images) {
             crow::json::wvalue img_json;
             img_json["id"] = image.id;
-            img_json["filename"] = image.filename;
+            img_json["name"] = image.name;
+            img_json["url"] = image.original_path;
             img_json["status"] = image.status;
             img_json["created_at"] = image.created_at;
             images_list.push_back(img_json);
@@ -91,8 +105,6 @@ crow::response ImageController::getAllImages(const crow::request& req) {
         return crow::response(500, std::string("Error: ") + e.what());
     }
 }
-
-
 
 crow::response ImageController::getStats(const crow::request& req) {
     try {
@@ -113,7 +125,7 @@ crow::response ImageController::getStats(const crow::request& req) {
     }
 }
 
-crow::response ImageController::getImagesByStatus(const crow::request& req  , const std::string& status) {
+crow::response ImageController::getImagesByStatus(const crow::request& req, const std::string& status) {
     try {
         if (status.empty()) {
             return crow::response(400, "Status parameter required");
@@ -142,11 +154,11 @@ crow::response ImageController::getImagesByStatus(const crow::request& req  , co
         return crow::response(500, std::string("Error: ") + e.what());
     }
 }
+
 crow::response ImageController::getImageById(const crow::request& req, int id) {
     try {
-        Image image = db_manager.getImage(id); // returns an Image object
+        Image image = db_manager.getImage(id); 
 
-        // If your DBManager signals "not found" by throwing or by a special ID (like -1), check that:
         if (image.id == -1) {
             return crow::response(404, "Image not found");
         }
@@ -155,7 +167,9 @@ crow::response ImageController::getImageById(const crow::request& req, int id) {
         response["id"] = image.id;
         response["filename"] = image.filename;
         response["status"] = image.status;
+        response["description"] = image.description;
         response["created_at"] = image.created_at;
+        
         return crow::response(200, response);
 
     } catch (const std::exception& e) {
@@ -174,8 +188,6 @@ bool ImageController::isValidImageFormat(const std::string& filename) {
     }
     return false;
 }
-
-
 
 void ImageController::registerRoutes(crow::SimpleApp& app) {
     CROW_ROUTE(app, "/api/images")
@@ -201,5 +213,10 @@ void ImageController::registerRoutes(crow::SimpleApp& app) {
         ([this](const crow::request& req) {
             return this->getStats(req);
         });
+    
+    CROW_ROUTE(app, "/api/images/status/<string>")
+        .methods("GET"_method)
+        ([this](const crow::request& req, const std::string& status) {
+            return this->getImagesByStatus(req, status);
+        });
 }
-

@@ -1,7 +1,7 @@
 {
     "name": "C++ Dev Container",
     "dockerFile": "Dockerfile",
-    "runArgs": ["--init"],
+    "runArgs": [ "--network=host"],
     "settings": {
       "terminal.integrated.defaultProfile.linux": "bash"
     },
@@ -14,7 +14,9 @@
       "ms-vscode.cmake-tools",
       "twxs.cmake"
     ],
-    "remoteUser": "vscode",
-    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake gdb"
+    "remoteUser": "root",
+  
+  
+  
   }
   

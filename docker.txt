@@ -1,0 +1,2 @@
+docker run --name postgress -d --network=host -p 5433:5432 -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+docker run --network=host  -e DB_NAME=postgress  -e R2_ENDPOINT=  -e R2_ACCESS_KEY -e R2_SECRET_KEY    cpp  

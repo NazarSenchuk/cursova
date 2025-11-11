@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockApi } from '../services/mockApi';
+import { Api } from '../services/Api'; // Changed from mockApi to Api
 
 const Reports = () => {
   const [reportType, setReportType] = useState('quality');
@@ -15,7 +15,7 @@ const Reports = () => {
   const generateReport = async () => {
     setIsGenerating(true);
     try {
-      const report = await mockApi.generateReport(reportType);
+      const report = await Api.generateReport(reportType); // Changed to Api
       setGeneratedReport(report);
     } catch (error) {
       alert('Помилка генерації звіту: ' + error.message);

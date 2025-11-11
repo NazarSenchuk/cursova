@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockApi } from '../services/mockApi';
+import { Api } from '../services/Api'; // Changed from mockApi to Api
 
 const ImageEditor = ({ selectedImage, onProcessingComplete }) => {
   const [selectedOperation, setSelectedOperation] = useState('resize');
@@ -19,7 +19,7 @@ const ImageEditor = ({ selectedImage, onProcessingComplete }) => {
 
     setIsProcessing(true);
     try {
-      const result = await mockApi.processImage(selectedImage.id, selectedOperation);
+      const result = await Api.processImage(selectedImage.id, selectedOperation); // Changed to Api
       setProcessingResult(result);
       onProcessingComplete(result);
     } catch (error) {

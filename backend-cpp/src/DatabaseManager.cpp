@@ -43,6 +43,7 @@ void DatabaseManager::createTables() {
                 description TEXT , 
                 filename VARCHAR(255) NOT NULL,
                 original_path TEXT NOT NULL,
+                processed_path TEXT ,
                 status VARCHAR(50) DEFAULT 'pending',
                 error_message TEXT DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,13 +71,13 @@ int DatabaseManager::createImage(const Image& image) {
         pqxx::work txn(*connection);
         
         std::string sql = R"(
-            INSERT INTO images (name , description, filename, original_path, status)
-            VALUES ($1, $2, $3, $4, $5 )
+            INSERT INTO images (name , description, filename, original_path, processed_path, status)
+            VALUES ($1, $2, $3, $4, $5 , $6 )
             RETURNING id
         )";
         
         pqxx::result result = txn.exec_params(
-            sql, image.name , image.description, image.filename, image.original_path, 
+            sql, image.name , image.description, image.filename, image.original_path, image.processed_path ,
             image.status
         );
         

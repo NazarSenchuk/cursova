@@ -1,0 +1,123 @@
+FROM ubuntu:22.04
+
+WORKDIR /workspaces/cursova  # Change to match the expected path
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies including development tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    libssl-dev \
+    libpqxx-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
+    libasio-dev \
+    inotify-tools \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build AWS SDK
+RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git /tmp/aws-sdk-cpp && \
+    cd /tmp/aws-sdk-cpp && mkdir build && cd build && \
+    cmake .. -DBUILD_ONLY="s3" -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTING=OFF && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/aws-sdk-cpp
+
+# Build Crow
+RUN git clone https://github.com/CrowCpp/Crow.git /tmp/crow && \
+    cd /tmp/crow && mkdir build && cd build && \
+    cmake .. -DCROW_BUILD_EXAMPLES=OFF -DCROW_BUILD_TESTS=OFF && \
+    make install && \
+    rm -rf /tmp/crow
+
+# Create backend-cpp directory
+RUN mkdir -p /workspaces/cursova/backend-cpp
+
+WORKDIR /workspaces/cursova/backend-cpp
+
+# Create hot reload script with CORRECT paths
+RUN cat > /usr/local/bin/hot-reload.sh << 'EOF'
+#!/bin/bash
+
+echo "Starting C++ backend with hot reload..."
+
+WORK_DIR="/workspaces/cursova/backend-cpp"
+BUILD_DIR="$WORK_DIR/build"
+
+# Function to build the project
+build_project() {
+    echo "Building project..."
+    mkdir -p "$BUILD_DIR"
+    cd "$WORK_DIR"
+    # Clean CMake cache if paths are mismatched
+    if [ -f "$BUILD_DIR/CMakeCache.txt" ]; then
+        rm -f "$BUILD_DIR/CMakeCache.txt"
+    fi
+    cmake -S . -B "$BUILD_DIR"
+    cmake --build "$BUILD_DIR" -j4
+}
+
+# Function to start the backend
+start_backend() {
+    echo "Starting backend application..."
+    "$BUILD_DIR/bin/backend" &
+    echo $! > /tmp/backend.pid
+}
+
+# Function to stop the backend
+stop_backend() {
+    if [ -f /tmp/backend.pid ]; then
+        BACKEND_PID=$(cat /tmp/backend.pid)
+        if kill -0 "$BACKEND_PID" 2>/dev/null; then
+            echo "Stopping backend (PID: $BACKEND_PID)..."
+            kill "$BACKEND_PID"
+            wait "$BACKEND_PID" 2>/dev/null || true
+        fi
+        rm -f /tmp/backend.pid
+    fi
+}
+
+# Cleanup function
+cleanup() {
+    echo "Shutting down..."
+    stop_backend
+    exit 0
+}
+
+# Set up signal handlers
+trap cleanup SIGINT SIGTERM
+
+# Initial build and start
+if build_project; then
+    start_backend
+else
+    echo "Initial build failed! Check CMake configuration."
+    # Keep watching even if initial build fails
+fi
+
+# Watch for file changes
+echo "Watching for file changes in $WORK_DIR..."
+while true; do
+    # Wait for file changes (excluding build directory)
+    inotifywait -r -e modify,create,delete --exclude "$BUILD_DIR" "$WORK_DIR"
+    
+    echo "File change detected! Rebuilding..."
+    
+    # Stop current backend
+    stop_backend
+    
+    # Rebuild
+    if build_project; then
+        echo "Build successful! Restarting backend..."
+        start_backend
+    else
+        echo "Build failed! Fix errors and save to retry."
+    fi
+done
+EOF
+
+RUN chmod +x /usr/local/bin/hot-reload.sh
+
+# Set the default command
+CMD ["/usr/local/bin/hot-reload.sh"]

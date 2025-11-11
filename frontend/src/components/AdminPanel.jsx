@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi';
+import { Api } from '../services/Api'; // Changed from mockApi to Api
 
 const AdminPanel = () => {
   const [stats, setStats] = useState(null);
@@ -12,12 +12,12 @@ const AdminPanel = () => {
   }, []);
 
   const loadStats = async () => {
-    const statsData = await mockApi.getAdminStats();
+    const statsData = await Api.getAdminStats(); // Changed to Api
     setStats(statsData);
   };
 
   const loadLogs = async () => {
-    const logsData = await mockApi.getProcessingLogs();
+    const logsData = await Api.getProcessingLogs(); // Changed to Api
     setLogs(logsData);
   };
 
@@ -70,19 +70,19 @@ const AdminPanel = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th>Файл</th>
-                <th>Операція</th>
-                <th>Статус</th>
-                <th>Час</th>
-                <th>Тривалість</th>
+                <th style={styles.tableTh}>Файл</th>
+                <th style={styles.tableTh}>Операція</th>
+                <th style={styles.tableTh}>Статус</th>
+                <th style={styles.tableTh}>Час</th>
+                <th style={styles.tableTh}>Тривалість</th>
               </tr>
             </thead>
             <tbody>
               {logs.map(log => (
                 <tr key={log.id}>
-                  <td>{log.filename}</td>
-                  <td>{log.operation}</td>
-                  <td>
+                  <td style={styles.tableTd}>{log.filename}</td>
+                  <td style={styles.tableTd}>{log.operation}</td>
+                  <td style={styles.tableTd}>
                     <span style={{
                       ...styles.status,
                       ...(log.status === 'completed' ? styles.statusCompleted : styles.statusError)
@@ -90,8 +90,8 @@ const AdminPanel = () => {
                       {log.status}
                     </span>
                   </td>
-                  <td>{new Date(log.timestamp).toLocaleString()}</td>
-                  <td>{log.duration}</td>
+                  <td style={styles.tableTd}>{new Date(log.timestamp).toLocaleString()}</td>
+                  <td style={styles.tableTd}>{log.duration}</td>
                 </tr>
               ))}
             </tbody>
