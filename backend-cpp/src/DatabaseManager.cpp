@@ -9,11 +9,10 @@ DatabaseManager::DatabaseManager(const DatabaseConfig& db_config)
 }
 
 
-
+// Database connection
 bool DatabaseManager::connect() {
     try {
         connection = std::make_unique<pqxx::connection>(config.getConnectionString());
-        
         if (connection->is_open()) {
             std::cout << "Connected to PostgreSQL database: " << config.name << std::endl;
             createTables();
@@ -28,10 +27,14 @@ bool DatabaseManager::connect() {
     }
 }
 
+
+
+// Database connection check
 bool DatabaseManager::isConnected() const {
     return connection && connection->is_open();
 }
 
+// Init Tables
 void DatabaseManager::createTables() {
     try {
         pqxx::work txn(*connection);
@@ -42,7 +45,7 @@ void DatabaseManager::createTables() {
                 name VARCHAR(255) , 
                 description TEXT , 
                 filename VARCHAR(255) NOT NULL,
-                original_path TEXT NOT NULL,
+                original_path TEXT,
                 processed_path TEXT ,
                 status VARCHAR(50) DEFAULT 'pending',
                 error_message TEXT DEFAULT '',
@@ -54,6 +57,23 @@ void DatabaseManager::createTables() {
             CREATE INDEX IF NOT EXISTS idx_images_description  ON images(description);
             CREATE INDEX IF NOT EXISTS idx_images_status ON images(status);
             CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
+
+            CREATE TABLE IF NOT EXISTS tasks (
+                id SERIAL PRIMARY KEY,
+                processing_type VARCHAR(255) NOT NULL,
+                status VARCHAR(255) NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP NULL,
+                duration INTERVAL NULL,
+                image_id INT NOT NULL,
+                CONSTRAINT fk_image FOREIGN KEY (image_id)
+                REFERENCES images(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_tasks_image_id ON tasks(image_id);
+            CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+            CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
+            
         )";
         
         txn.exec(createTableSQL);
@@ -65,7 +85,7 @@ void DatabaseManager::createTables() {
         std::cerr << "Table creation error: " << e.what() << std::endl;
     }
 }
-
+// Image Creating 
 int DatabaseManager::createImage(const Image& image) {
     try {
         pqxx::work txn(*connection);
@@ -83,6 +103,7 @@ int DatabaseManager::createImage(const Image& image) {
         
         txn.commit();
         
+        // return id 
         if (!result.empty()) {
             return result[0][0].as<int>();
         }
@@ -94,6 +115,40 @@ int DatabaseManager::createImage(const Image& image) {
         return -1;
     }
 }
+
+// Creating task
+int DatabaseManager::createTask(const Task& task) {
+    try {
+        pqxx::work txn(*connection);
+
+        // Fixed: INSERT INTO tasks (not images)
+        std::string sql = R"(
+            INSERT INTO tasks (processing_type, status, image_id)
+            VALUES ($1, $2, $3)
+            RETURNING id
+        )";
+        
+        // Fixed: removed extra comma
+        pqxx::result result = txn.exec_params(
+            sql, task.processing_type, task.status, task.image_id
+        );
+        
+        txn.commit();
+        
+        // Return id
+        if (!result.empty()) {
+            return result[0][0].as<int>();
+        }
+        
+        return -1;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Create task error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+
 
 Image DatabaseManager::getImage(int id) {
     try {
@@ -137,6 +192,30 @@ std::vector<Image> DatabaseManager::getAllImages() {
     
     return images;
 }
+
+
+std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
+    std::vector<Task> tasks;
+    
+    try {
+        pqxx::work txn(*connection);
+        
+        std::string sql = "SELECT * FROM tasks WHERE  image_id = $1";
+        pqxx::result result = txn.exec_params(sql , image_id);
+        
+        for (const auto& row : result) {
+            Task task;
+            task.fromPgResult(row);
+            tasks.push_back(task); 
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Get all tasks error: " << e.what() << std::endl;
+    }
+    
+    return tasks;
+}
+
 
 std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status) {
     std::vector<Image> images;

@@ -59,9 +59,6 @@ bool R2Manager::testConnect() {
 }
 
 std::string R2Manager::uploadImageToR2(const std::string& filename, const std::string& file_data , const int id ) {
-    std::cout << "=== R2 UPLOAD START ===" << std::endl;
-    std::cout << "Filename: " << filename << std::endl;
-    std::cout << "File size: " << file_data.size() << std::endl;
 
     try {
         Aws::Client::ClientConfiguration client_config;
@@ -88,16 +85,11 @@ std::string R2Manager::uploadImageToR2(const std::string& filename, const std::s
         *stream << file_data;
         request.SetBody(stream);
 
-        std::cout << "Making PutObject request..." << std::endl;
 
-        // Single attempt with detailed error handling
         auto outcome = s3_client.PutObject(request);
 
         if (outcome.IsSuccess()) {
-            std::cout << "✅ Uploaded successfully to R2: " << filename << std::endl;
-            std::string url = config.endpoint + "/" + config.bucket_name + "/" + "/original/" + filename;
-            std::cout << "Generated URL: " << url << std::endl;
-            return url;
+            return "";
         } else {
             std::cerr << "❌ Upload failed: " << outcome.GetError().GetMessage() << std::endl;
             std::cerr << "Error type: " << outcome.GetError().GetExceptionName() << std::endl;
@@ -111,4 +103,11 @@ std::string R2Manager::uploadImageToR2(const std::string& filename, const std::s
         std::cerr << "❌ R2 Upload Unknown Exception" << std::endl;
         return "";
     }
+}
+
+
+std::string R2Manager::getPublicURL(const std::string& filename , const int id){
+    return  config.public_url + "/original/" + std::to_string(id) + "-"+  filename;
+
+
 }

@@ -45,23 +45,20 @@ crow::response ImageController::uploadImage(const crow::request& req) {
             std::cout << "   ERROR: Invalid image format" << std::endl;
             return crow::response(400, "Invalid image format");
         }
-        std::cout << "Загружаємо фото на S3" << std::endl;
-        std::string url = r2_manager.uploadImageToR2(filename, file_data);
-        if (url.empty()) {
-            std::cout << "   ERROR: R2 upload failed" << std::endl;
-            return crow::response(500, "Failed to upload image to R2");
-        }
-        std::cout << "   R2 URL: " << url << std::endl;
-        
+
         std::cout << "Загружаємо метадані в базу даних" << std::endl;
-        Image new_image(name, description, filename, url, "", "uploaded");
+        Image new_image(name, description, filename, "", "", "uploaded");
         int image_id = db_manager.createImage(new_image);
         
         if (image_id == -1) {
             std::cout << "   ERROR: Database creation failed" << std::endl;
             return crow::response(500, "Database error");
         }
+
+        std::cout << "Загружаємо фото на S3" << std::endl;
+        r2_manager.uploadImageToR2(filename, file_data ,image_id);
         
+      
         std::cout << "Фото збережене " << image_id << std::endl;
         
         crow::json::wvalue response; 
@@ -92,7 +89,7 @@ crow::response ImageController::getAllImages(const crow::request& req) {
             crow::json::wvalue img_json;
             img_json["id"] = image.id;
             img_json["name"] = image.name;
-            img_json["url"] = image.original_path;
+            img_json["url"] =  r2_manager.getPublicURL(image.filename , image.id);
             img_json["status"] = image.status;
             img_json["created_at"] = image.created_at;
             images_list.push_back(img_json);
@@ -165,6 +162,8 @@ crow::response ImageController::getImageById(const crow::request& req, int id) {
 
         crow::json::wvalue response;
         response["id"] = image.id;
+        response["name"] = image.name;
+        response["url"] =  r2_manager.getPublicURL(image.filename , image.id);
         response["filename"] = image.filename;
         response["status"] = image.status;
         response["description"] = image.description;

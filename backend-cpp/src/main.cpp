@@ -3,26 +3,35 @@
 #include "ImageController.h"
 #include "DatabaseManager.h"
 #include "config/Config.h"
-
 #include <iostream>
 
+
+
 int main() {
-    // Use CORS middleware
+    // SDK and Crow app init 
     crow::App<crow::CORSHandler> app;
     Aws::SDKOptions options;
     Aws::InitAPI(options);
-    // Configure CORS
+
+
+
+    // adding midleware for CORS
     auto& cors = app.get_middleware<crow::CORSHandler>();
-    
     cors.global()
-        .origin("*")  // Allow all origins, or specify "http://localhost:3000"
+        .origin("*")  // allowing all origins
         .methods("GET"_method, "POST"_method, "PUT"_method, "DELETE"_method, "OPTIONS"_method)
         .headers("Content-Type", "Authorization", "X-Requested-With", "Origin", "Accept");
-        // .allow_credentials();  // Remove this line or use without parameters if needed
 
+
+    // database config
     DatabaseConfig db_config;
+
+
+    //server config
     ServerConfig server_config;
     server_config.port = 8080;
+
+    //r2_config
     R2Config r2_config;
 
     // Database initialization
@@ -32,20 +41,18 @@ int main() {
         return 1;
     }
 
+
+    // R2  initialization
     R2Manager r2_manager(r2_config);
-    std::cout << r2_config.endpoint;
     if(!r2_manager.testConnect()){
-        std::cerr << "Помилка з конектом до R2" << std::endl;
+        std::cerr << "Failed to connect to r2" << std::endl;
         return 1;
     }
     
     // Controller initialization
     ImageController image_controller(db_manager, r2_manager);
-    
-    // Register routes - you'll need to update ImageController to accept crow::App<crow::CORSHandler>
-    // For now, manually register the routes:
-    
-    // Manual route registration since registerRoutes expects different app type
+
+    // routes
     CROW_ROUTE(app, "/api/images")
         .methods("POST"_method)
         ([&image_controller](const crow::request& req) {
@@ -70,15 +77,13 @@ int main() {
             return image_controller.getStats(req);
         });
     
-    // Additional endpoints
     CROW_ROUTE(app, "/api/images/status/<string>")
         .methods("GET"_method)
         ([&image_controller](const crow::request& req, const std::string& status) {
             return image_controller.getImagesByStatus(req, status);
         });
 
-    // Test endpoint
-    CROW_ROUTE(app, "/api/test")
+    CROW_ROUTE(app, "/health")
         .methods("GET"_method)
         ([]() {
             crow::json::wvalue result;
@@ -90,7 +95,9 @@ int main() {
     std::cout << "C++ API Server with CORS middleware starting on http://localhost:" 
               << server_config.port << std::endl;
     
+    // running server with multi thread
     app.port(server_config.port).multithreaded().run();
+    //shutdown  AWS SDK
     Aws::ShutdownAPI(options);
     return 0;
 }

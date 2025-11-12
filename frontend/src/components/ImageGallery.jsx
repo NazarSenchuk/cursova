@@ -19,6 +19,7 @@ const ImageGallery = ({ images, onImageSelect, onDeleteImage }) => {
             style={styles.image}
             onClick={() => onImageSelect(image)}
           />
+          <h2> {image.name}</h2>
           <div style={styles.imageInfo}>
             <span style={styles.filename}>{image.name}</span>
             <button

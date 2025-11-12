@@ -1,31 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import ImageUpload from './components/ImageUpload.jsx';
-import ImageGallery from './components/ImageGallery.jsx';
-import ImageEditor from './components/ImageEditor.jsx';
-import AdminPanel from './components/AdminPanel.jsx';
-import Reports from './components/Reports.jsx';
-import { Api } from './services/Api'; // Changed from mockApi to Api
+import ImageUpload from './components/ImageUpload';
+import ImageGallery from './components/ImageGallery';
+import ImageDetail from './components/ImageDetail';
+import AdminPanel from './components/AdminPanel';
+import Reports from './components/Reports';
+import { Api } from './services/Api';
 import './App.css';
 
 function App() {
   const [images, setImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [processedImages, setProcessedImages] = useState([]);
   const [activeTab, setActiveTab] = useState('gallery');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'detail'
 
   useEffect(() => {
     loadImages();
-    loadProcessedImages();
   }, []);
 
   const loadImages = async () => {
-    const imagesData = await Api.getImages(); // Changed to Api
-    setImages(imagesData);
-  };
-
-  const loadProcessedImages = async () => {
-    const processedData = await Api.getProcessedImages(); // Changed to Api
-    setProcessedImages(processedData);
+    try {
+      const imagesData = await Api.getImages();
+      setImages(imagesData);
+    } catch (error) {
+      console.error('Error loading images:', error);
+    }
   };
 
   const handleImageUploaded = (newImage) => {
@@ -34,16 +32,43 @@ function App() {
 
   const handleDeleteImage = async (imageId) => {
     if (window.confirm('Видалити це зображення?')) {
-      await Api.deleteImage(imageId); // Changed to Api
-      setImages(prev => prev.filter(img => img.id !== imageId));
-      if (selectedImage && selectedImage.id === imageId) {
-        setSelectedImage(null);
+      try {
+        await Api.deleteImage(imageId);
+        setImages(prev => prev.filter(img => img.id !== imageId));
+        if (selectedImage && selectedImage.id === imageId) {
+          setSelectedImage(null);
+          setViewMode('grid');
+        }
+      } catch (error) {
+        alert('Помилка видалення: ' + error.message);
       }
     }
   };
 
-  const handleProcessingComplete = (result) => {
-    setProcessedImages(prev => [result, ...prev]);
+  const handleImageSelect = (image) => {
+    setSelectedImage(image);
+    setViewMode('detail');
+  };
+
+  const handleBackToGallery = () => {
+    setViewMode('grid');
+    setSelectedImage(null);
+  };
+
+  const handleProcessingComplete = () => {
+    // Reload images to get updated processing history
+    if (selectedImage) {
+      loadImageDetail(selectedImage.id);
+    }
+  };
+
+  const loadImageDetail = async (imageId) => {
+    try {
+      const imageDetail = await Api.getImageDetail(imageId);
+      setSelectedImage(imageDetail);
+    } catch (error) {
+      console.error('Error loading image detail:', error);
+    }
   };
 
   return (
@@ -52,25 +77,32 @@ function App() {
         <h1 style={styles.title}>Фототека - Система обробки зображень</h1>
         <nav style={styles.nav}>
           <button
-            style={{...styles.navButton, ...(activeTab === 'gallery' && styles.activeNavButton)}}
-            onClick={() => setActiveTab('gallery')}
+            style={{
+              ...styles.navButton,
+              ...(activeTab === 'gallery' && styles.activeNavButton)
+            }}
+            onClick={() => {
+              setActiveTab('gallery');
+              setViewMode('grid');
+              setSelectedImage(null);
+            }}
           >
             Галерея
           </button>
           <button
-            style={{...styles.navButton, ...(activeTab === 'editor' && styles.activeNavButton)}}
-            onClick={() => setActiveTab('editor')}
-          >
-            Редактор
-          </button>
-          <button
-            style={{...styles.navButton, ...(activeTab === 'admin' && styles.activeNavButton)}}
+            style={{
+              ...styles.navButton,
+              ...(activeTab === 'admin' && styles.activeNavButton)
+            }}
             onClick={() => setActiveTab('admin')}
           >
             Адмін
           </button>
           <button
-            style={{...styles.navButton, ...(activeTab === 'reports' && styles.activeNavButton)}}
+            style={{
+              ...styles.navButton,
+              ...(activeTab === 'reports' && styles.activeNavButton)
+            }}
             onClick={() => setActiveTab('reports')}
           >
             Звіти
@@ -81,29 +113,32 @@ function App() {
       <main style={styles.main}>
         {activeTab === 'gallery' && (
           <>
-            <ImageUpload onImageUploaded={handleImageUploaded} />
-            <ImageGallery
-              images={images}
-              onImageSelect={setSelectedImage}
-              onDeleteImage={handleDeleteImage}
-            />
+            {viewMode === 'grid' ? (
+              <>
+                <ImageUpload onImageUploaded={handleImageUploaded} />
+                <ImageGallery
+                  images={images}
+                  onImageSelect={handleImageSelect}
+                  onDeleteImage={handleDeleteImage}
+                />
+              </>
+            ) : (
+              <ImageDetail
+                image={selectedImage}
+                onBack={handleBackToGallery}
+                onDelete={handleDeleteImage}
+                onProcessingComplete={handleProcessingComplete}
+              />
+            )}
           </>
         )}
 
-        {activeTab === 'editor' && (
-          <ImageEditor
-            selectedImage={selectedImage}
-            onProcessingComplete={handleProcessingComplete}
-          />
-        )}
-
         {activeTab === 'admin' && <AdminPanel />}
-
         {activeTab === 'reports' && <Reports />}
       </main>
 
       <footer style={styles.footer}>
-        <p>Фототека System © 2024 | API Demo</p>
+        <p>Фототека System © 2024 | AI Image Processing</p>
       </footer>
     </div>
   );
@@ -122,7 +157,8 @@ const styles = {
   },
   nav: {
     display: 'flex',
-    gap: '10px'
+    gap: '10px',
+    flexWrap: 'wrap'
   },
   navButton: {
     padding: '8px 16px',
@@ -130,7 +166,8 @@ const styles = {
     color: 'white',
     border: '1px solid white',
     borderRadius: '4px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
   },
   activeNavButton: {
     backgroundColor: '#007bff',
@@ -146,8 +183,6 @@ const styles = {
     color: 'white',
     textAlign: 'center',
     padding: '1rem',
-    position: 'relative',
-    bottom: 0,
     width: '100%'
   }
 };

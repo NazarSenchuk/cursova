@@ -5,7 +5,9 @@
 #include <string>
 #include <stdexcept>
 
+//Database  config
 struct DatabaseConfig {
+    //default values
     std::string host = "localhost";
     std::string port = "5432";
     std::string name = "image_processor";
@@ -19,17 +21,18 @@ struct DatabaseConfig {
                " user=" + user + 
                " password=" + password;
     }
-    
+    // getenv - getting from envs
     DatabaseConfig() {
         if (const char* env_host = std::getenv("DB_HOST")) host = env_host;
         if (const char* env_port = std::getenv("DB_PORT")) port = env_port;
         if (const char* env_user = std::getenv("DB_USER")) user = env_user;
         if (const char* env_password = std::getenv("DB_PASSWORD")) password = env_password;
-        // Keep default for DB_NAME if not specified
         if (const char* env_name = std::getenv("DB_NAME")) name = env_name;
     }
 };
 
+
+//ServerConfig
 struct ServerConfig {
     int port = 8080;
     
@@ -44,11 +47,14 @@ struct ServerConfig {
     }
 };
 
+
+//R2Config
 struct R2Config {
     std::string bucket_name = "images";
     std::string access_key;
     std::string secret_key;
     std::string endpoint;
+    std::string public_url  = "https://senchuknazar123.online";
 
     R2Config() {
         if (const char* env_bucket = std::getenv("R2_BUCKET_NAME")) bucket_name = env_bucket;

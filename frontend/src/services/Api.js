@@ -18,11 +18,126 @@ const apiClient = axios.create(API_CONFIG);
 
 export class Api {
 
+  // Tasks endpoints
+  static async getTasks(imageId = null) {
+    try {
+      const url = imageId ? `/tasks/${imageId}` : '/tasks';
+      console.log('Fetching tasks from:', `${API_CONFIG.baseURL}${url}`);
+      const response = await apiClient.get(url);
+      
+      // Ensure we return an array of tasks with the expected structure
+      const tasks = response.data.tasks || response.data || [];
+      return Array.isArray(tasks) ? tasks : [tasks];
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      return this.getMockTasks(imageId);
+    }
+  }
+
+  static async createTask(imageId, processingType, customPrompt = null) {
+    try {
+      const payload = {
+        image_id: imageId,
+        processing_type: processingType,
+        ...(customPrompt && { prompt: customPrompt })
+      };
+
+      console.log('Creating task with payload:', payload);
+      
+      const response = await apiClient.post('/tasks', payload);
+      
+      return {
+        id: response.data.id,
+        processing_type: processingType,
+        image_id: imageId,
+        processed_url: response.data.processed_url || null,
+        status: response.data.status || 'pending',
+        created_at: new Date().toISOString(),
+        ...(customPrompt && { prompt: customPrompt })
+      };
+    } catch (error) {
+      console.error('Error creating task:', error);
+      throw new Error('Failed to create processing task');
+    }
+  }
+
+  static async getTaskStatus(taskId) {
+    try {
+      const response = await apiClient.get(`/tasks/${taskId}/status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching task status:', error);
+      throw new Error('Failed to fetch task status');
+    }
+  }
+
+  // Updated image processing to use tasks
+  static async processImageWithAI(imageId, options) {
+    try {
+      const { operation, prompt } = options;
+      return await this.createTask(imageId, operation, prompt);
+    } catch (error) {
+      console.error('Error processing image with AI:', error);
+      throw new Error('Failed to process image with AI');
+    }
+  }
+
+  // Get processed versions for an image (uses tasks endpoint)
+  static async getProcessedVersions(imageId) {
+    try {
+      const tasks = await this.getTasks(imageId);
+      
+      // Filter completed tasks and map to processed images format
+      const processedVersions = tasks
+        .filter(task => task.status === 'completed' && task.processed_url)
+        .map(task => ({
+          id: task.id,
+          url: task.processed_url,
+          name: `Processed - ${task.processing_type}`,
+          operation: this.getOperationLabel(task.processing_type),
+          qualityScore: this.calculateQualityScore(task.processing_type),
+          processedAt: task.completed_at || task.created_at,
+          originalImageId: task.image_id
+        }));
+
+      return processedVersions;
+    } catch (error) {
+      console.error('Error fetching processed versions:', error);
+      return [];
+    }
+  }
+
+  // Get detailed image information including processing history
+  static async getImageDetail(imageId) {
+    try {
+      const [image, tasks] = await Promise.all([
+        this.getImageById(imageId),
+        this.getTasks(imageId)
+      ]);
+
+      // Enhance image data with processing information
+      return {
+        ...image,
+        processingCount: tasks.filter(task => task.status === 'completed').length,
+        processingHistory: tasks.map(task => ({
+          operation: task.processing_type,
+          status: task.status,
+          timestamp: task.created_at,
+          duration: task.duration,
+          qualityScore: this.calculateQualityScore(task.processing_type)
+        }))
+      };
+    } catch (error) {
+      console.error('Error fetching image detail:', error);
+      throw new Error('Failed to fetch image details');
+    }
+  }
+
+  // Original image endpoints (keep existing)
   static async getImages() {
     try {
       console.log('Fetching images from:', `${API_CONFIG.baseURL}/images`);
       const response = await apiClient.get('/images');
-
       return response.data.images || [];
     } catch (error) {
       console.error('Error fetching images:', error);
@@ -40,7 +155,7 @@ export class Api {
     }
   }
 
-  static async uploadImage(file, name ,description ) {
+  static async uploadImage(file, name, description) {
     try {
       const formData = new FormData();
       formData.append('file', file); 
@@ -78,7 +193,6 @@ export class Api {
 
   static async deleteImage(imageId) {
     try {
-
       const response = await apiClient.delete(`/images/${imageId}`);
       return response.data;
     } catch (error) {
@@ -108,26 +222,25 @@ export class Api {
     }
   }
 
-  // Image processing endpoints (you'll need to implement these in your C++ API)
+  // Keep legacy processImage for backward compatibility
   static async processImage(imageId, operation, params = {}) {
-    try {
-      // You'll need to add this endpoint to your ImageController
-      const response = await apiClient.post(`/images/${imageId}/process`, {
-        operation,
-        params
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error processing image:', error);
-      throw new Error('Failed to process image');
-    }
+    return this.processImageWithAI(imageId, { operation, ...params });
   }
 
   static async getProcessedImages() {
     try {
-      // You can use the status filter endpoint if you implement it
-      const response = await apiClient.get('/images/status/completed');
-      return response.data.images || [];
+      // Get all completed tasks across all images
+      const allTasks = await this.getTasks();
+      const completedTasks = allTasks.filter(task => task.status === 'completed' && task.processed_url);
+      
+      return completedTasks.map(task => ({
+        id: task.id,
+        url: task.processed_url,
+        name: `Processed - ${task.processing_type}`,
+        originalImageId: task.image_id,
+        operation: task.processing_type,
+        processedAt: task.completed_at
+      }));
     } catch (error) {
       console.error('Error fetching processed images:', error);
       return [];
@@ -136,9 +249,18 @@ export class Api {
 
   static async getProcessingLogs() {
     try {
-      // You'll need to implement this endpoint in your C++ API
-      const response = await apiClient.get('/admin/logs');
-      return response.data;
+      // Use tasks as processing logs
+      const allTasks = await this.getTasks();
+      
+      return allTasks.map(task => ({
+        id: task.id,
+        filename: `Image ${task.image_id}`,
+        operation: task.processing_type,
+        status: task.status,
+        timestamp: task.created_at,
+        duration: task.duration || 'N/A',
+        userId: 'user123'
+      }));
     } catch (error) {
       console.error('Error fetching processing logs:', error);
       return this.getMockLogs();
@@ -147,7 +269,6 @@ export class Api {
 
   static async generateReport(reportType) {
     try {
-      // You'll need to implement this endpoint in your C++ API
       const response = await apiClient.post('/reports/generate', {
         reportType
       });
@@ -158,7 +279,7 @@ export class Api {
     }
   }
 
-  // Helper method to get images by status (you have this endpoint in C++)
+  // Helper method to get images by status
   static async getImagesByStatus(status) {
     try {
       const response = await apiClient.get(`/images/status/${status}`);
@@ -169,7 +290,78 @@ export class Api {
     }
   }
 
+  // Helper methods for task processing
+  static getOperationLabel(processingType) {
+    const labels = {
+      'enhance': 'Покращити якість',
+      'style_transfer': 'Перенести стиль',
+      'super_resolution': 'Супер-дозвіл',
+      'denoise': 'Видалити шум',
+      'colorize': 'Колоризація',
+      'background_remove': 'Видалити фон',
+      'object_remove': 'Видалити об\'єкт',
+      'custom': 'Кастомна обробка'
+    };
+    return labels[processingType] || processingType;
+  }
+
+  static calculateQualityScore(processingType) {
+    // Mock quality score based on operation type
+    const baseScores = {
+      'enhance': 8.5,
+      'super_resolution': 9.0,
+      'denoise': 8.0,
+      'colorize': 7.5,
+      'background_remove': 8.2,
+      'style_transfer': 7.8,
+      'object_remove': 7.0,
+      'custom': 7.0
+    };
+    
+    const baseScore = baseScores[processingType] || 7.0;
+    // Add some random variation
+    return baseScore + (Math.random() * 0.5 - 0.25);
+  }
+
   // Mock data fallbacks
+  static getMockTasks(imageId = null) {
+    console.warn('Using mock tasks data - API might be unavailable');
+    const mockTasks = [
+      {
+        id: 1,
+        processing_type: 'enhance',
+        image_id: imageId || 1,
+        processed_url: 'https://picsum.photos/200/300?random=101',
+        status: 'completed',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        completed_at: new Date(Date.now() - 3500000).toISOString(),
+        duration: '10.5s'
+      },
+      {
+        id: 2,
+        processing_type: 'style_transfer',
+        image_id: imageId || 1,
+        processed_url: 'https://picsum.photos/200/300?random=102',
+        status: 'completed',
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+        completed_at: new Date(Date.now() - 7100000).toISOString(),
+        duration: '15.2s'
+      },
+      {
+        id: 3,
+        processing_type: 'background_remove',
+        image_id: imageId || 2,
+        processed_url: null,
+        status: 'processing',
+        created_at: new Date().toISOString(),
+        duration: null
+      }
+    ];
+
+    // Filter by imageId if provided
+    return imageId ? mockTasks.filter(task => task.image_id === imageId) : mockTasks;
+  }
+
   static getMockImages() {
     console.warn('Using mock images data - API might be unavailable');
     return [
@@ -182,7 +374,10 @@ export class Api {
         status: 'completed',
         uploadedAt: new Date().toISOString(),
         size: 1024 * 1024,
-        type: 'image/jpeg'
+        type: 'image/jpeg',
+        width: 800,
+        height: 600,
+        format: 'JPEG'
       },
       {
         id: 2,
@@ -193,7 +388,10 @@ export class Api {
         status: 'pending',
         uploadedAt: new Date().toISOString(),
         size: 1024 * 512,
-        type: 'image/jpeg'
+        type: 'image/jpeg',
+        width: 1024,
+        height: 768,
+        format: 'JPEG'
       }
     ];
   }
@@ -207,7 +405,7 @@ export class Api {
       pendingCount: 4,
       storageUsed: '45.2 MB',
       activeUsers: 3,
-      mostPopularOperation: 'resize'
+      mostPopularOperation: 'enhance'
     };
   }
 
@@ -216,7 +414,7 @@ export class Api {
       {
         id: 1,
         filename: 'image1.jpg',
-        operation: 'resize',
+        operation: 'enhance',
         status: 'completed',
         timestamp: new Date().toISOString(),
         duration: '1.2s',
@@ -225,12 +423,12 @@ export class Api {
       {
         id: 2,
         filename: 'image2.jpg',
-        operation: 'grayscale',
+        operation: 'style_transfer',
         status: 'error',
         timestamp: new Date(Date.now() - 3600000).toISOString(),
         duration: '0.5s',
         userId: 'user123',
-        error: 'Invalid image format'
+        error: 'Processing timeout'
       }
     ];
   }

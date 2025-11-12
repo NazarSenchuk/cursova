@@ -24,9 +24,9 @@ private:
 public:
     R2Manager(const R2Config& r2_config);
     ~R2Manager();
-    
+    std::string getPublicURL(const std::string& filename , const int id);
     bool testConnect();
-    std::string uploadImageToR2(const std::string& filename, const std::string& file_data);
+    std::string uploadImageToR2(const std::string& filename, const std::string& file_data , const int id);
     //Image getImageFromS3(int id);
     //int countFiles();
     //bool deleteImageFromS3(int id);
