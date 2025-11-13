@@ -18,9 +18,17 @@ void Task::fromPgResult(const pqxx::row& row) {
     status = row["status"].as<std::string>();
     
     
-    duration  = row["duration"].as<std::string>();
+    if (!row["duration"].is_null()) {
+    duration = row["duration"].as<std::string>();
+    } else {
+        duration = "";
+    }
     created_at = row["created_at"].as<std::string>();
-    completed_at = row["completed_at"].as<std::string>();
+    if (!row["completed_at"].is_null()) {
+        completed_at = row["completed_at"].as<std::string>();
+    } else {
+        completed_at = "";
+    }
 }
 
 std::string Task::toJson() const {

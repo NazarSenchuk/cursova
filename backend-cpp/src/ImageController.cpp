@@ -9,6 +9,8 @@ ImageController::ImageController(DatabaseManager& db, R2Manager& r2_manager)
     : db_manager(db), r2_manager(r2_manager) {
 }
 
+
+
 crow::response ImageController::uploadImage(const crow::request& req) {
     std::cout << "=== Початок оброблення фото ===" << std::endl;
     try {
@@ -186,36 +188,4 @@ bool ImageController::isValidImageFormat(const std::string& filename) {
             return true;
     }
     return false;
-}
-
-void ImageController::registerRoutes(crow::SimpleApp& app) {
-    CROW_ROUTE(app, "/api/images")
-        .methods("POST"_method)
-        ([this](const crow::request& req) {
-            return this->uploadImage(req);
-        });
-    
-    CROW_ROUTE(app, "/api/images")
-        .methods("GET"_method)
-        ([this](const crow::request& req) {
-            return this->getAllImages(req);
-        });
-    
-    CROW_ROUTE(app, "/api/images/<int>")
-        .methods("GET"_method)
-        ([this](const crow::request& req, int id) {
-            return this->getImageById(req, id);
-        });
-    
-    CROW_ROUTE(app, "/api/stats")
-        .methods("GET"_method)
-        ([this](const crow::request& req) {
-            return this->getStats(req);
-        });
-    
-    CROW_ROUTE(app, "/api/images/status/<string>")
-        .methods("GET"_method)
-        ([this](const crow::request& req, const std::string& status) {
-            return this->getImagesByStatus(req, status);
-        });
 }

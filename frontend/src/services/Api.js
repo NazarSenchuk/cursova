@@ -34,33 +34,37 @@ export class Api {
     }
   }
 
-  static async createTask(imageId, processingType, customPrompt = null) {
+  static async createTask(imageId, processingType) {
     try {
-      const payload = {
+      const formData = new FormData();
+      formData.append('image_id', imageId.toString());
+      formData.append('processing_type', processingType);
+  
+      console.log('Creating task with form data:', {
         image_id: imageId,
         processing_type: processingType,
-        ...(customPrompt && { prompt: customPrompt })
-      };
-
-      console.log('Creating task with payload:', payload);
+      });
       
-      const response = await apiClient.post('/tasks', payload);
+      const response = await apiClient.post('/tasks', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('Task creation response:', response.data);
       
       return {
         id: response.data.id,
         processing_type: processingType,
         image_id: imageId,
-        processed_url: response.data.processed_url || null,
         status: response.data.status || 'pending',
         created_at: new Date().toISOString(),
-        ...(customPrompt && { prompt: customPrompt })
       };
     } catch (error) {
       console.error('Error creating task:', error);
       throw new Error('Failed to create processing task');
     }
   }
-
   static async getTaskStatus(taskId) {
     try {
       const response = await apiClient.get(`/tasks/${taskId}/status`);
@@ -74,8 +78,8 @@ export class Api {
   // Updated image processing to use tasks
   static async processImageWithAI(imageId, options) {
     try {
-      const { operation, prompt } = options;
-      return await this.createTask(imageId, operation, prompt);
+      const { operation } = options;
+      return await this.createTask(imageId, operation);
     } catch (error) {
       console.error('Error processing image with AI:', error);
       throw new Error('Failed to process image with AI');

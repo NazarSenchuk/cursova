@@ -6,13 +6,13 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
   const [selectedOperation, setSelectedOperation] = useState('enhance');
   const [isProcessing, setIsProcessing] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
-  const [processedVersions, setProcessedVersions] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [imageDetail, setImageDetail] = useState(image);
 
   useEffect(() => {
     if (image) {
       loadImageDetail();
-      loadProcessedVersions();
+      loadTasks();
     }
   }, [image]);
 
@@ -25,24 +25,20 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
     }
   };
 
-  const loadProcessedVersions = async () => {
+  const loadTasks = async () => {
     try {
-      const versions = await Api.getProcessedVersions(image.id);
-      setProcessedVersions(versions);
+      const tasksData = await Api.getTasks(image.id);
+      setTasks(tasksData);
     } catch (error) {
-      console.error('Error loading processed versions:', error);
+      console.error('Error loading tasks:', error);
     }
   };
 
   const aiOperations = [
     { value: 'enhance', label: 'Покращити якість', description: 'AI покращення різкості та кольорів' },
-    { value: 'style_transfer', label: 'Перенести стиль', description: 'Застосувати художній стиль' },
-    { value: 'super_resolution', label: 'Супер-дозвіл', description: 'Збільшити роздільну здатність' },
-    { value: 'denoise', label: 'Видалити шум', description: 'AI видалення цифрового шуму' },
-    { value: 'colorize', label: 'Колоризація', description: 'Розфарбувати чорно-біле зображення' },
-    { value: 'background_remove', label: 'Видалити фон', description: 'AI видалення фону' },
-    { value: 'object_remove', label: 'Видалити об\'єкт', description: 'Видалити об\'єкт з зображення' },
-    { value: 'custom', label: 'Кастомна обробка', description: 'Обробка за власним запитом' }
+    { value: 'restore', label: 'Відновити', description: 'Відновлення старих та пошкоджених фотографій' },
+    { value: 'anime', label: 'Аніме', description: 'Перетворення фотографії в  аніме стиль' },
+
   ];
 
   const handleProcess = async () => {
@@ -57,8 +53,8 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
 
       await Api.processImageWithAI(imageDetail.id, processingOptions);
       
-      // Reload processed versions and image detail
-      await loadProcessedVersions();
+      // Reload tasks and image detail
+      await loadTasks();
       await loadImageDetail();
       
       onProcessingComplete();
@@ -76,15 +72,49 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
     }
   };
 
-  const handleDeleteProcessed = async (processedImageId) => {
-    if (window.confirm('Видалити цю оброблену версію?')) {
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm('Видалити це завдання обробки?')) {
       try {
-        await Api.deleteImage(processedImageId);
-        setProcessedVersions(prev => prev.filter(img => img.id !== processedImageId));
+        await Api.deleteImage(taskId);
+        setTasks(prev => prev.filter(task => task.id !== taskId));
       } catch (error) {
         alert('Помилка видалення: ' + error.message);
       }
     }
+  };
+
+  const getOperationLabel = (operationType) => {
+    const operation = aiOperations.find(op => op.value === operationType);
+    return operation ? operation.label : operationType;
+  };
+
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      'pending': 'В очікуванні',
+      'processing': 'Обробляється',
+      'completed': 'Завершено',
+      'error': 'Помилка'
+    };
+    return statusMap[status] || status;
+  };
+
+  const getStatusColor = (status) => {
+    const colorMap = {
+      'pending': '#ffc107',
+      'processing': '#17a2b8',
+      'completed': '#28a745',
+      'error': '#dc3545'
+    };
+    return colorMap[status] || '#6c757d';
+  };
+
+  const downloadImage = (url, filename) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!imageDetail) {
@@ -183,20 +213,11 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
             <button
               style={{
                 ...styles.tab,
-                ...(activeTab === 'processed' && styles.activeTab)
+                ...(activeTab === 'tasks' && styles.activeTab)
               }}
-              onClick={() => setActiveTab('processed')}
+              onClick={() => setActiveTab('tasks')}
             >
-              Оброблені версії ({processedVersions.length})
-            </button>
-            <button
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'history' && styles.activeTab)
-              }}
-              onClick={() => setActiveTab('history')}
-            >
-              Історія
+              Завдання обробки ({tasks.length})
             </button>
           </div>
 
@@ -245,25 +266,75 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
               </div>
             )}
 
-            {activeTab === 'processed' && (
+            {activeTab === 'tasks' && (
               <div>
-                <h3>Оброблені версії</h3>
-                {processedVersions.length > 0 ? (
-                  <div style={styles.processedGrid}>
-                    {processedVersions.map(version => (
-                      <div key={version.id} style={styles.processedCard}>
-                        <img
-                          src={version.url}
-                          alt={`Processed: ${version.name}`}
-                          style={styles.processedImage}
-                        />
-                        <div style={styles.processedInfo}>
-                          <strong>{version.operation}</strong>
-                          <span>Якість: {version.qualityScore?.toFixed(1) || 'N/A'}</span>
-                          <span>{new Date(version.processedAt).toLocaleDateString('uk-UA')}</span>
+                <h3>Завдання обробки</h3>
+                {tasks.length > 0 ? (
+                  <div style={styles.tasksList}>
+                    {tasks.map(task => (
+                      <div key={task.id} style={styles.taskCard}>
+                        <div style={styles.taskHeader}>
+                          <div style={styles.taskInfo}>
+                            <strong style={styles.taskOperation}>
+                              {getOperationLabel(task.processing_type)}
+                            </strong>
+                            <span 
+                              style={{
+                                ...styles.taskStatus,
+                                backgroundColor: getStatusColor(task.status)
+                              }}
+                            >
+                              {getStatusLabel(task.status)}
+                            </span>
+                          </div>
+                          <div style={styles.taskDate}>
+                            Створено: {new Date(task.created_at).toLocaleString('uk-UA')}
+                          </div>
+                        </div>
+
+                        {task.status === 'completed' && task.processed_url && (
+                          <div style={styles.completedTask}>
+                            <div style={styles.processedImageSection}>
+                              <img
+                                src={task.processed_url}
+                                alt={`Processed: ${task.processing_type}`}
+                                style={styles.processedThumbnail}
+                              />
+                              <div style={styles.processedActions}>
+                                <button
+                                  onClick={() => window.open(task.processed_url, '_blank')}
+                                  style={styles.viewButton}
+                                >
+                                  Переглянути
+                                </button>
+                                <button
+                                  onClick={() => downloadImage(task.processed_url, `processed_${task.id}.jpg`)}
+                                  style={styles.downloadButton}
+                                >
+                                  Завантажити
+                                </button>
+                              </div>
+                            </div>
+                            <div style={styles.taskDetails}>
+                              <div style={styles.detailItem}>
+                                <strong>Завершено:</strong>
+                                <span>{task.completed_at ? new Date(task.completed_at).toLocaleString('uk-UA') : 'Невідомо'}</span>
+                              </div>
+                              {task.duration && (
+                                <div style={styles.detailItem}>
+                                  <strong>Тривалість:</strong>
+                                  <span>{task.duration}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={styles.taskActions}>
                           <button
-                            onClick={() => handleDeleteProcessed(version.id)}
+                            onClick={() => handleDeleteTask(task.id)}
                             style={styles.deleteSmallButton}
+                            disabled={task.status === 'processing'}
                           >
                             Видалити
                           </button>
@@ -272,42 +343,11 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
                     ))}
                   </div>
                 ) : (
-                  <div style={styles.emptyVersions}>
-                    <p>Ще немає оброблених версій</p>
-                    <p style={styles.hint}>Використайте AI обробку для створення нових версій</p>
+                  <div style={styles.emptyTasks}>
+                    <p>Ще немає завдань обробки</p>
+                    <p style={styles.hint}>Використайте AI обробку для створення нових завдань</p>
                   </div>
                 )}
-              </div>
-            )}
-
-            {activeTab === 'history' && (
-              <div>
-                <h3>Історія обробки</h3>
-                <div style={styles.history}>
-                  {imageDetail.processingHistory?.length > 0 ? (
-                    imageDetail.processingHistory.map((item, index) => (
-                      <div key={index} style={styles.historyItem}>
-                        <div style={styles.historyHeader}>
-                          <strong>{item.operation}</strong>
-                          <span style={styles.historyDate}>
-                            {new Date(item.timestamp).toLocaleString('uk-UA')}
-                          </span>
-                        </div>
-                        <div style={styles.historyDetails}>
-                          <span>Статус: {item.status}</span>
-                          {item.qualityScore && (
-                            <span>Якість: {item.qualityScore}</span>
-                          )}
-                          {item.duration && (
-                            <span>Час: {item.duration}с</span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>Немає історії обробки</p>
-                  )}
-                </div>
               </div>
             )}
           </div>
@@ -485,43 +525,110 @@ const styles = {
     borderBottom: '1px solid #f0f0f0',
     alignItems: 'center'
   },
-  processedGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: '20px',
-    marginTop: '15px'
-  },
-  processedCard: {
-    border: '1px solid #e9ecef',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    backgroundColor: 'white',
-    transition: 'transform 0.2s ease',
-    cursor: 'pointer'
-  },
-  processedImage: {
-    width: '100%',
-    height: '150px',
-    objectFit: 'cover'
-  },
-  processedInfo: {
-    padding: '12px',
+  tasksList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px',
+    gap: '15px'
+  },
+  taskCard: {
+    border: '1px solid #e9ecef',
+    borderRadius: '8px',
+    padding: '15px',
+    backgroundColor: 'white'
+  },
+  taskHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '10px'
+  },
+  taskInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px'
+  },
+  taskOperation: {
+    fontSize: '16px',
+    color: '#333'
+  },
+  taskStatus: {
+    padding: '4px 8px',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    width: 'fit-content'
+  },
+  taskDate: {
+    fontSize: '12px',
+    color: '#6c757d'
+  },
+  completedTask: {
+    marginTop: '10px',
+    padding: '15px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '6px',
+    border: '1px solid #e9ecef'
+  },
+  processedImageSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    marginBottom: '10px'
+  },
+  processedThumbnail: {
+    width: '80px',
+    height: '80px',
+    objectFit: 'cover',
+    borderRadius: '6px',
+    border: '1px solid #ddd'
+  },
+  processedActions: {
+    display: 'flex',
+    gap: '10px'
+  },
+  viewButton: {
+    padding: '8px 12px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
     fontSize: '12px'
   },
+  downloadButton: {
+    padding: '8px 12px',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px'
+  },
+  taskDetails: {
+    display: 'flex',
+    gap: '20px',
+    fontSize: '13px'
+  },
+  detailItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px'
+  },
+  taskActions: {
+    marginTop: '10px',
+    textAlign: 'right'
+  },
   deleteSmallButton: {
-    padding: '4px 8px',
+    padding: '6px 12px',
     backgroundColor: '#dc3545',
     color: 'white',
     border: 'none',
-    borderRadius: '3px',
+    borderRadius: '4px',
     cursor: 'pointer',
-    fontSize: '11px',
-    marginTop: '5px'
+    fontSize: '12px'
   },
-  emptyVersions: {
+  emptyTasks: {
     textAlign: 'center',
     padding: '40px',
     color: '#6c757d'
@@ -530,33 +637,6 @@ const styles = {
     fontSize: '14px',
     color: '#999',
     marginTop: '10px'
-  },
-  history: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  },
-  historyItem: {
-    padding: '15px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '6px',
-    borderLeft: '4px solid #007bff'
-  },
-  historyHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px'
-  },
-  historyDate: {
-    fontSize: '12px',
-    color: '#6c757d'
-  },
-  historyDetails: {
-    display: 'flex',
-    gap: '15px',
-    fontSize: '13px',
-    color: '#666'
   },
   emptyState: {
     textAlign: 'center',

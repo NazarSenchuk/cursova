@@ -85,6 +85,10 @@ void DatabaseManager::createTables() {
         std::cerr << "Table creation error: " << e.what() << std::endl;
     }
 }
+
+
+// IMAGE OPERATIONS ---------
+
 // Image Creating 
 int DatabaseManager::createImage(const Image& image) {
     try {
@@ -115,6 +119,98 @@ int DatabaseManager::createImage(const Image& image) {
         return -1;
     }
 }
+//Get Image by id 
+Image DatabaseManager::getImage(int id) {
+    try {
+        pqxx::work txn(*connection);
+        
+        std::string sql = "SELECT * FROM images WHERE id = $1";
+        pqxx::result result = txn.exec_params(sql, id);
+        
+        if (!result.empty()) {
+            Image image;
+            image.fromPgResult(result[0]);
+            return image;
+        }
+        
+        return Image(); 
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Get image error: " << e.what() << std::endl;
+        return Image();
+    }
+}
+//Get all Images
+std::vector<Image> DatabaseManager::getAllImages() {
+    std::vector<Image> images;
+    
+    try {
+        pqxx::work txn(*connection);
+        
+        std::string sql = "SELECT * FROM images ORDER BY created_at DESC";
+        pqxx::result result = txn.exec(sql);
+        
+        for (const auto& row : result) {
+            Image image;
+            image.fromPgResult(row);
+            images.push_back(image); //  MAKE UNDERSTAND 
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Get all images error: " << e.what() << std::endl;
+    }
+    
+    return images;
+}
+//Get image by status
+std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status) {
+    std::vector<Image> images;
+    
+    try {
+        pqxx::work txn(*connection);
+        
+        std::string sql = "SELECT * FROM images WHERE status = $1 ORDER BY created_at DESC";
+        pqxx::result result = txn.exec_params(sql, status);
+        
+        for (const auto& row : result) {
+            Image image;
+            image.fromPgResult(row);
+            images.push_back(image);
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Get images by status error: " << e.what() << std::endl;
+    }
+    
+    return images;
+}
+//  Update Image status 
+bool DatabaseManager::updateImageStatus(int id, const std::string& status, 
+                                       const std::string& error_msg ) {
+    try {
+        pqxx::work txn(*connection);
+        
+        std::string sql = R"(
+            UPDATE images 
+            SET status = $1,  error_message = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+        )";
+        
+        txn.exec_params(sql, status,  error_msg, id);
+        txn.commit();
+        
+        return true;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Update image status error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+
+
+// TASK OPERATIONS-----
 
 // Creating task
 int DatabaseManager::createTask(const Task& task) {
@@ -147,53 +243,6 @@ int DatabaseManager::createTask(const Task& task) {
         return -1;
     }
 }
-
-
-
-Image DatabaseManager::getImage(int id) {
-    try {
-        pqxx::work txn(*connection);
-        
-        std::string sql = "SELECT * FROM images WHERE id = $1";
-        pqxx::result result = txn.exec_params(sql, id);
-        
-        if (!result.empty()) {
-            Image image;
-            image.fromPgResult(result[0]);
-            return image;
-        }
-        
-        return Image(); 
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Get image error: " << e.what() << std::endl;
-        return Image();
-    }
-}
-
-std::vector<Image> DatabaseManager::getAllImages() {
-    std::vector<Image> images;
-    
-    try {
-        pqxx::work txn(*connection);
-        
-        std::string sql = "SELECT * FROM images ORDER BY created_at DESC";
-        pqxx::result result = txn.exec(sql);
-        
-        for (const auto& row : result) {
-            Image image;
-            image.fromPgResult(row);
-            images.push_back(image); //  MAKE UNDERSTAND 
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Get all images error: " << e.what() << std::endl;
-    }
-    
-    return images;
-}
-
-
 std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
     std::vector<Task> tasks;
     
@@ -217,50 +266,10 @@ std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
 }
 
 
-std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status) {
-    std::vector<Image> images;
-    
-    try {
-        pqxx::work txn(*connection);
-        
-        std::string sql = "SELECT * FROM images WHERE status = $1 ORDER BY created_at DESC";
-        pqxx::result result = txn.exec_params(sql, status);
-        
-        for (const auto& row : result) {
-            Image image;
-            image.fromPgResult(row);
-            images.push_back(image);
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Get images by status error: " << e.what() << std::endl;
-    }
-    
-    return images;
-}
 
-bool DatabaseManager::updateImageStatus(int id, const std::string& status, 
-                                       const std::string& error_msg ) {
-    try {
-        pqxx::work txn(*connection);
-        
-        std::string sql = R"(
-            UPDATE images 
-            SET status = $1,  error_message = $2, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $3
-        )";
-        
-        txn.exec_params(sql, status,  error_msg, id);
-        txn.commit();
-        
-        return true;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Update image status error: " << e.what() << std::endl;
-        return false;
-    }
-}
 
+
+// STATISTIC OPERATIONS
 DatabaseManager::Statistics DatabaseManager::getStatistics() {  // ВИНЕСТИ  В ІНШУ ЛОГІКУ
     Statistics stats = {0}; 
     

@@ -4,7 +4,7 @@
 #include "DatabaseManager.h"
 #include "config/Config.h"
 #include <iostream>
-
+#include "TaskController.h"
 
 
 int main() {
@@ -49,8 +49,11 @@ int main() {
         return 1;
     }
     
-    // Controller initialization
+    // Image Controller initialization
     ImageController image_controller(db_manager, r2_manager);
+    
+    // Task Controller 
+    TaskController task_controller(db_manager , r2_manager);
 
     // routes
     CROW_ROUTE(app, "/api/images")
@@ -81,6 +84,17 @@ int main() {
         .methods("GET"_method)
         ([&image_controller](const crow::request& req, const std::string& status) {
             return image_controller.getImagesByStatus(req, status);
+        });
+
+    CROW_ROUTE(app, "/api/tasks/<int>")
+        .methods("GET"_method)
+        ([&task_controller](const crow::request& req , int image_id) {
+            return task_controller.getTasks(req ,image_id);
+        });
+    CROW_ROUTE(app, "/api/tasks")
+        .methods("POST"_method)
+        ([&task_controller](const crow::request& req) {
+            return task_controller.createTask(req);
         });
 
     CROW_ROUTE(app, "/health")

@@ -26,7 +26,6 @@ public:
     crow::response deleteImage(const crow::request& req, int id);
     crow::response getStats(const crow::request& req);
     
-    void registerRoutes(crow::SimpleApp& app);
 };
 
 
