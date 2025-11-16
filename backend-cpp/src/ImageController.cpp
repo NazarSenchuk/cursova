@@ -65,6 +65,9 @@ crow::response ImageController::uploadImage(const crow::request& req) {
         
         crow::json::wvalue response; 
         response["id"] = image_id;
+        response["url"]  = r2_manager.getPublicURL(filename , image_id);
+        response["name"] = name ; 
+        response["description"] =  description;
         response["filename"] = filename;
         response["status"] = "pending";        
         return crow::response(201, response);
@@ -83,14 +86,15 @@ crow::response ImageController::getAllImages(const crow::request& req) {
     try {
         auto images = db_manager.getAllImages();
         crow::json::wvalue response;
-        
-        response["count"] = images.size();
+        std::cout << "dwadwadwawdwadwda" << std::endl ;
         
         crow::json::wvalue::list images_list;
         for (const auto& image : images) {
             crow::json::wvalue img_json;
+            std::cout << "==========" << image.description << std::endl ;
             img_json["id"] = image.id;
             img_json["name"] = image.name;
+            img_json["description"] = image.description;
             img_json["url"] =  r2_manager.getPublicURL(image.filename , image.id);
             img_json["status"] = image.status;
             img_json["created_at"] = image.created_at;

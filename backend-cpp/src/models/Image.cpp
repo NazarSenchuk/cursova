@@ -24,7 +24,7 @@ void Image::fromPgResult(const pqxx::row& row) {
         error_message = row["error_message"].as<std::string>();
     }
     
-    
+    description  = row["description"].as<std::string>();
     
     created_at = row["created_at"].as<std::string>();
     updated_at = row["updated_at"].as<std::string>();
@@ -34,7 +34,8 @@ std::string Image::toJson() const {
     std::stringstream json;
     json << "{"
          << "\"id\":" << id << ","
-         << "\"name\":\"" << filename << "\","
+         << "\"name\":\"" << name << "\","
+         << "\"description\":\"" << description<< "\","
          << "\"filename\":\"" << filename << "\","
          << "\"original_path\":\"" << original_path << "\","
          << "\"processed_path\":\"" << processed_path << "\","

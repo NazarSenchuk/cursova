@@ -153,7 +153,7 @@ std::vector<Image> DatabaseManager::getAllImages() {
         for (const auto& row : result) {
             Image image;
             image.fromPgResult(row);
-            images.push_back(image); //  MAKE UNDERSTAND 
+            images.push_back(image);
         }
         
     } catch (const std::exception& e) {

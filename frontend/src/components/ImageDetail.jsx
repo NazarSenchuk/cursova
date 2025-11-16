@@ -3,9 +3,8 @@ import { Api } from '../services/Api';
 
 const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
   const [activeTab, setActiveTab] = useState('info');
-  const [selectedOperation, setSelectedOperation] = useState('enhance');
+  const [selectedProcessingType, setSelectedProcessingType] = useState('enhance');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState('');
   const [tasks, setTasks] = useState([]);
   const [imageDetail, setImageDetail] = useState(image);
 
@@ -18,7 +17,7 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
 
   const loadImageDetail = async () => {
     try {
-      const detail = await Api.getImageDetail(image.id);
+      const detail = await Api.getImageById(image.id);
       setImageDetail(detail);
     } catch (error) {
       console.error('Error loading image detail:', error);
@@ -34,11 +33,10 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
     }
   };
 
-  const aiOperations = [
+  const processingTypes = [
     { value: 'enhance', label: 'Покращити якість', description: 'AI покращення різкості та кольорів' },
     { value: 'restore', label: 'Відновити', description: 'Відновлення старих та пошкоджених фотографій' },
-    { value: 'anime', label: 'Аніме', description: 'Перетворення фотографії в  аніме стиль' },
-
+    { value: 'anime', label: 'Аніме', description: 'Перетворення фотографії в аніме стиль' },
   ];
 
   const handleProcess = async () => {
@@ -46,25 +44,12 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
 
     setIsProcessing(true);
     try {
-      const processingOptions = {
-        operation: selectedOperation,
-        prompt: selectedOperation === 'custom' ? customPrompt : undefined
-      };
-
-      await Api.processImageWithAI(imageDetail.id, processingOptions);
+      await Api.createTask(imageDetail.id, selectedProcessingType);
       
-      // Reload tasks and image detail
       await loadTasks();
       await loadImageDetail();
-      
       onProcessingComplete();
       
-      // Reset custom prompt
-      if (selectedOperation === 'custom') {
-        setCustomPrompt('');
-      }
-      
-      alert('Обробка успішно завершена!');
     } catch (error) {
       alert('Помилка AI обробки: ' + error.message);
     } finally {
@@ -83,9 +68,9 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
     }
   };
 
-  const getOperationLabel = (operationType) => {
-    const operation = aiOperations.find(op => op.value === operationType);
-    return operation ? operation.label : operationType;
+  const getProcessingTypeLabel = (processingType) => {
+    const type = processingTypes.find(pt => pt.value === processingType);
+    return type ? type.label : processingType;
   };
 
   const getStatusLabel = (status) => {
@@ -117,6 +102,9 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
     document.body.removeChild(link);
   };
 
+  // Правильний розрахунок кількості обробок
+  const completedTasksCount = tasks.filter(task => task.status === 'completed').length;
+  const tasksCount = tasks.length ;
   if (!imageDetail) {
     return (
       <div style={styles.emptyState}>
@@ -151,47 +139,32 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
             style={styles.mainImage}
           />
           
-          {/* Processing Controls */}
           <div style={styles.processingCard}>
             <h3 style={styles.cardTitle}>AI Обробка зображення</h3>
             
-            <div style={styles.operationSelection}>
+            <div style={styles.processingTypeSelection}>
               <label style={styles.label}>Тип обробки:</label>
               <select 
-                value={selectedOperation} 
-                onChange={(e) => setSelectedOperation(e.target.value)}
+                value={selectedProcessingType} 
+                onChange={(e) => setSelectedProcessingType(e.target.value)}
                 style={styles.select}
                 disabled={isProcessing}
               >
-                {aiOperations.map(op => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
+                {processingTypes.map(pt => (
+                  <option key={pt.value} value={pt.value}>
+                    {pt.label}
                   </option>
                 ))}
               </select>
               
-              <div style={styles.operationDescription}>
-                {aiOperations.find(op => op.value === selectedOperation)?.description}
+              <div style={styles.processingTypeDescription}>
+                {processingTypes.find(pt => pt.value === selectedProcessingType)?.description}
               </div>
-
-              {selectedOperation === 'custom' && (
-                <div style={styles.promptSection}>
-                  <label style={styles.label}>AI Запит:</label>
-                  <textarea
-                    value={customPrompt}
-                    onChange={(e) => setCustomPrompt(e.target.value)}
-                    style={styles.promptInput}
-                    placeholder="Опишіть, як ви хочете обробити зображення (наприклад: 'зроби закат', 'додай сніг', тощо)..."
-                    rows={3}
-                    disabled={isProcessing}
-                  />
-                </div>
-              )}
             </div>
 
             <button
               onClick={handleProcess}
-              disabled={isProcessing || (selectedOperation === 'custom' && !customPrompt.trim())}
+              disabled={isProcessing}
               style={styles.processButton}
             >
               {isProcessing ? 'AI Обробка...' : 'Запустити AI обробку'}
@@ -235,32 +208,20 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
                     <span>{imageDetail.description || 'Без опису'}</span>
                   </div>
                   <div style={styles.infoItem}>
-                    <strong>Розмір файлу:</strong>
-                    <span>{imageDetail.fileSize || 'Невідомо'}</span>
-                  </div>
-                  <div style={styles.infoItem}>
-                    <strong>Формат:</strong>
-                    <span>{imageDetail.format || 'Невідомо'}</span>
-                  </div>
-                  <div style={styles.infoItem}>
-                    <strong>Розмір зображення:</strong>
-                    <span>
-                      {imageDetail.width && imageDetail.height 
-                        ? `${imageDetail.width} × ${imageDetail.height}` 
-                        : 'Невідомо'}
-                    </span>
-                  </div>
-                  <div style={styles.infoItem}>
                     <strong>Дата завантаження:</strong>
                     <span>
-                      {imageDetail.uploadDate
-                        ? new Date(imageDetail.uploadDate).toLocaleDateString('uk-UA')
+                      {imageDetail.created_at
+                        ? new Date(imageDetail.created_at).toLocaleDateString('uk-UA')
                         : 'Невідомо'}
                     </span>
                   </div>
                   <div style={styles.infoItem}>
                     <strong>Кількість обробок:</strong>
-                    <span>{imageDetail.processingCount || 0}</span>
+                    <span>{tasksCount}</span>
+                  </div>
+                  <div style={styles.infoItem}>
+                    <strong>Кількість виконаних обробок:</strong>
+                    <span>{completedTasksCount}</span>
                   </div>
                 </div>
               </div>
@@ -275,8 +236,8 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
                       <div key={task.id} style={styles.taskCard}>
                         <div style={styles.taskHeader}>
                           <div style={styles.taskInfo}>
-                            <strong style={styles.taskOperation}>
-                              {getOperationLabel(task.processing_type)}
+                            <strong style={styles.taskProcessingType}>
+                              {getProcessingTypeLabel(task.processing_type)}
                             </strong>
                             <span 
                               style={{
@@ -320,12 +281,6 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
                                 <strong>Завершено:</strong>
                                 <span>{task.completed_at ? new Date(task.completed_at).toLocaleString('uk-UA') : 'Невідомо'}</span>
                               </div>
-                              {task.duration && (
-                                <div style={styles.detailItem}>
-                                  <strong>Тривалість:</strong>
-                                  <span>{task.duration}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         )}
@@ -358,291 +313,91 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
 };
 
 const styles = {
-  container: {
-    padding: '20px',
-    maxWidth: '1400px',
-    margin: '0 auto'
-  },
+  container: { padding: '20px', maxWidth: '1400px', margin: '0 auto' },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
-    paddingBottom: '15px',
-    borderBottom: '2px solid #e9ecef'
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: '30px', paddingBottom: '15px', borderBottom: '2px solid #e9ecef'
   },
   backButton: {
-    padding: '10px 20px',
-    backgroundColor: '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 'bold'
+    padding: '10px 20px', backgroundColor: '#6c757d', color: 'white',
+    border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold'
   },
-  title: {
-    margin: 0,
-    color: '#333',
-    fontSize: '24px',
-    textAlign: 'center',
-    flex: 1
-  },
+  title: { margin: 0, color: '#333', fontSize: '24px', textAlign: 'center', flex: 1 },
   deleteButton: {
-    padding: '10px 20px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 'bold'
+    padding: '10px 20px', backgroundColor: '#dc3545', color: 'white',
+    border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold'
   },
-  content: {
-    display: 'grid',
-    gridTemplateColumns: '400px 1fr',
-    gap: '40px',
-    alignItems: 'start'
-  },
-  imageSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  mainImage: {
-    width: '100%',
-    borderRadius: '12px',
-    boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
-  },
+  content: { display: 'grid', gridTemplateColumns: '400px 1fr', gap: '40px', alignItems: 'start' },
+  imageSection: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  mainImage: { width: '100%', borderRadius: '12px', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' },
   processingCard: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '25px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    border: '1px solid #e9ecef'
+    backgroundColor: 'white', borderRadius: '12px', padding: '25px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #e9ecef'
   },
-  cardTitle: {
-    margin: '0 0 20px 0',
-    color: '#333',
-    fontSize: '20px',
-    textAlign: 'center'
-  },
-  operationSelection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '15px',
-    marginBottom: '20px'
-  },
-  label: {
-    fontWeight: 'bold',
-    color: '#333',
-    fontSize: '14px'
-  },
-  select: {
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #ddd',
-    fontSize: '14px',
-    backgroundColor: 'white'
-  },
-  operationDescription: {
-    fontSize: '13px',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '8px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '4px',
-    borderLeft: '3px solid #007bff'
-  },
-  promptSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  promptInput: {
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #ddd',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    resize: 'vertical',
-    minHeight: '80px'
+  cardTitle: { margin: '0 0 20px 0', color: '#333', fontSize: '20px', textAlign: 'center' },
+  processingTypeSelection: { display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' },
+  label: { fontWeight: 'bold', color: '#333', fontSize: '14px' },
+  select: { padding: '12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', backgroundColor: 'white' },
+  processingTypeDescription: {
+    fontSize: '13px', color: '#666', fontStyle: 'italic', padding: '8px',
+    backgroundColor: '#f8f9fa', borderRadius: '4px', borderLeft: '3px solid #007bff'
   },
   processButton: {
-    padding: '15px 25px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    transition: 'all 0.3s ease',
-    width: '100%'
+    padding: '15px 25px', backgroundColor: '#28a745', color: 'white', border: 'none',
+    borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold',
+    transition: 'all 0.3s ease', width: '100%'
   },
   infoSection: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '0',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    border: '1px solid #e9ecef',
-    overflow: 'hidden'
+    backgroundColor: 'white', borderRadius: '12px', padding: '0',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #e9ecef', overflow: 'hidden'
   },
-  tabs: {
-    display: 'flex',
-    borderBottom: '1px solid #dee2e6',
-    backgroundColor: '#f8f9fa'
-  },
+  tabs: { display: 'flex', borderBottom: '1px solid #dee2e6', backgroundColor: '#f8f9fa' },
   tab: {
-    padding: '15px 25px',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    borderBottom: '3px solid transparent',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#6c757d',
-    transition: 'all 0.3s ease'
+    padding: '15px 25px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+    borderBottom: '3px solid transparent', fontSize: '14px', fontWeight: 'bold', color: '#6c757d'
   },
-  activeTab: {
-    borderBottomColor: '#007bff',
-    color: '#007bff',
-    backgroundColor: 'white'
-  },
-  tabContent: {
-    padding: '25px',
-    minHeight: '400px'
-  },
-  infoGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
+  activeTab: { borderBottomColor: '#007bff', color: '#007bff', backgroundColor: 'white' },
+  tabContent: { padding: '25px', minHeight: '400px' },
+  infoGrid: { display: 'flex', flexDirection: 'column', gap: '20px' },
   infoItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '12px 0',
-    borderBottom: '1px solid #f0f0f0',
-    alignItems: 'center'
+    display: 'flex', justifyContent: 'space-between', padding: '12px 0',
+    borderBottom: '1px solid #f0f0f0', alignItems: 'center'
   },
-  tasksList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '15px'
-  },
-  taskCard: {
-    border: '1px solid #e9ecef',
-    borderRadius: '8px',
-    padding: '15px',
-    backgroundColor: 'white'
-  },
-  taskHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '10px'
-  },
-  taskInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '5px'
-  },
-  taskOperation: {
-    fontSize: '16px',
-    color: '#333'
-  },
+  tasksList: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  taskCard: { border: '1px solid #e9ecef', borderRadius: '8px', padding: '15px', backgroundColor: 'white' },
+  taskHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' },
+  taskInfo: { display: 'flex', flexDirection: 'column', gap: '5px' },
+  taskProcessingType: { fontSize: '16px', color: '#333' },
   taskStatus: {
-    padding: '4px 8px',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    width: 'fit-content'
+    padding: '4px 8px', borderRadius: '12px', color: 'white',
+    fontSize: '12px', fontWeight: 'bold', width: 'fit-content'
   },
-  taskDate: {
-    fontSize: '12px',
-    color: '#6c757d'
-  },
+  taskDate: { fontSize: '12px', color: '#6c757d' },
   completedTask: {
-    marginTop: '10px',
-    padding: '15px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '6px',
-    border: '1px solid #e9ecef'
+    marginTop: '10px', padding: '15px', backgroundColor: '#f8f9fa',
+    borderRadius: '6px', border: '1px solid #e9ecef'
   },
-  processedImageSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '15px',
-    marginBottom: '10px'
-  },
-  processedThumbnail: {
-    width: '80px',
-    height: '80px',
-    objectFit: 'cover',
-    borderRadius: '6px',
-    border: '1px solid #ddd'
-  },
-  processedActions: {
-    display: 'flex',
-    gap: '10px'
-  },
+  processedImageSection: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' },
+  processedThumbnail: { width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #ddd' },
+  processedActions: { display: 'flex', gap: '10px' },
   viewButton: {
-    padding: '8px 12px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px'
+    padding: '8px 12px', backgroundColor: '#007bff', color: 'white',
+    border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'
   },
   downloadButton: {
-    padding: '8px 12px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px'
+    padding: '8px 12px', backgroundColor: '#28a745', color: 'white',
+    border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'
   },
-  taskDetails: {
-    display: 'flex',
-    gap: '20px',
-    fontSize: '13px'
-  },
-  detailItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px'
-  },
-  taskActions: {
-    marginTop: '10px',
-    textAlign: 'right'
-  },
+  taskDetails: { display: 'flex', gap: '20px', fontSize: '13px' },
+  detailItem: { display: 'flex', flexDirection: 'column', gap: '2px' },
+  taskActions: { marginTop: '10px', textAlign: 'right' },
   deleteSmallButton: {
-    padding: '6px 12px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px'
+    padding: '6px 12px', backgroundColor: '#dc3545', color: 'white',
+    border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'
   },
-  emptyTasks: {
-    textAlign: 'center',
-    padding: '40px',
-    color: '#6c757d'
-  },
-  hint: {
-    fontSize: '14px',
-    color: '#999',
-    marginTop: '10px'
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '40px',
-    color: '#666'
-  }
+  emptyTasks: { textAlign: 'center', padding: '40px', color: '#6c757d' },
+  hint: { fontSize: '14px', color: '#999', marginTop: '10px' },
+  emptyState: { textAlign: 'center', padding: '40px', color: '#666' }
 };
 
 export default ImageDetail;

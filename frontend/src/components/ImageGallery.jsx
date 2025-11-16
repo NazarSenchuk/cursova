@@ -21,7 +21,7 @@ const ImageGallery = ({ images, onImageSelect, onDeleteImage }) => {
           />
           <h2> {image.name}</h2>
           <div style={styles.imageInfo}>
-            <span style={styles.filename}>{image.name}</span>
+            <span style={styles.filename}>{image.description}</span>
             <button
               onClick={() => onDeleteImage(image.id)}
               style={styles.deleteButton}
