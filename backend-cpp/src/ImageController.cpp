@@ -129,6 +129,7 @@ crow::response ImageController::getAllImages(const crow::request& req) {
 
 crow::response ImageController::getStats(const crow::request& req) {
     try {
+        
         auto stats = db_manager.getStatistics();
         
         crow::json::wvalue response;
