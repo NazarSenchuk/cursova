@@ -4,6 +4,7 @@
 #include <exception>
 
 
+
 DatabaseManager::DatabaseManager(const DatabaseConfig& db_config) 
     : config(db_config) {
 }
@@ -122,7 +123,7 @@ int DatabaseManager::createImage(const Image& image) {
 //Get Image by id 
 Image DatabaseManager::getImage(int id) {
     try {
-        pqxx::work txn(*connection);
+        pqxx::nontransaction txn(*connection);
         
         std::string sql = "SELECT * FROM images WHERE id = $1";
         pqxx::result result = txn.exec_params(sql, id);
@@ -145,7 +146,7 @@ std::vector<Image> DatabaseManager::getAllImages() {
     std::vector<Image> images;
     
     try {
-        pqxx::work txn(*connection);
+        pqxx::nontransaction txn(*connection);
         
         std::string sql = "SELECT * FROM images ORDER BY created_at DESC";
         pqxx::result result = txn.exec(sql);
@@ -167,7 +168,7 @@ std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status)
     std::vector<Image> images;
     
     try {
-        pqxx::work txn(*connection);
+        pqxx::nontransaction txn(*connection);
         
         std::string sql = "SELECT * FROM images WHERE status = $1 ORDER BY created_at DESC";
         pqxx::result result = txn.exec_params(sql, status);
@@ -247,7 +248,7 @@ std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
     std::vector<Task> tasks;
     
     try {
-        pqxx::work txn(*connection);
+        pqxx::nontransaction txn(*connection);
         
         std::string sql = "SELECT * FROM tasks WHERE  image_id = $1";
         pqxx::result result = txn.exec_params(sql , image_id);
@@ -274,7 +275,7 @@ DatabaseManager::Statistics DatabaseManager::getStatistics() {  // ВИНЕСТ�
     Statistics stats = {0}; 
     
     try {
-        pqxx::work txn(*connection);
+        pqxx::nontransaction txn(*connection);
         
         // Загальна кількість
         std::string count_sql = "SELECT COUNT(*) FROM images";

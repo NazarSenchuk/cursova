@@ -116,8 +116,6 @@ while true; do
     fi
 done
 EOF
-
 RUN chmod +x /usr/local/bin/hot-reload.sh
-
 # Set the default command
 CMD ["/usr/local/bin/hot-reload.sh"]

@@ -3,7 +3,7 @@ import { Api } from '../services/Api';
 
 const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
   const [activeTab, setActiveTab] = useState('info');
-  const [selectedProcessingType, setSelectedProcessingType] = useState('enhance');
+  const [selectedProcessingType, setSelectedProcessingType] = useState('white-blue');
   const [isProcessing, setIsProcessing] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [imageDetail, setImageDetail] = useState(image);
@@ -34,9 +34,15 @@ const ImageDetail = ({ image, onBack, onDelete, onProcessingComplete }) => {
   };
 
   const processingTypes = [
-    { value: 'enhance', label: 'Покращити якість', description: 'AI покращення різкості та кольорів' },
-    { value: 'restore', label: 'Відновити', description: 'Відновлення старих та пошкоджених фотографій' },
-    { value: 'anime', label: 'Аніме', description: 'Перетворення фотографії в аніме стиль' },
+    { value: 'white-blue', label: 'Біло-синій', description: 'Перетворення в біло-синю палітру' },
+    { value: 'grayscale', label: 'Чорно-білий', description: 'Перетворення в чорно-біле зображення' },
+    { value: 'blur', label: 'Розмиття', description: 'Застосування ефекту розмиття' },
+    { value: 'sharpen', label: 'Різкість', description: 'Підвищення різкості зображення' },
+    { value: 'edge-detection', label: 'Детекція країв', description: 'Виділення контурів на зображенні' },
+    { value: 'sepia', label: 'Сепія', description: 'Вінтажний коричневий відтінок' },
+    { value: 'invert', label: 'Інверсія', description: 'Інвертування кольорів зображення' },
+    { value: 'brightness', label: 'Яскравість', description: 'Коригування яскравості зображення' },
+    { value: 'contrast', label: 'Контраст', description: 'Коригування контрастності зображення' },
   ];
 
   const handleProcess = async () => {

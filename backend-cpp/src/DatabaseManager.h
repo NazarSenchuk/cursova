@@ -23,6 +23,8 @@ private:
 public:
     DatabaseManager(const DatabaseConfig& db_config);
     
+    
+
     bool connect();
     bool isConnected() const;
     

@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y \
 # Copy built binaries
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /workspace/backend-cpp/build/bin/backend /app/backend
-
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+CMD curl -f http://localhost:8000/ || exit 1
 EXPOSE 8080
 CMD ["./backend"]

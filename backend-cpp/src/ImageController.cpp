@@ -19,27 +19,33 @@ crow::response ImageController::uploadImage(const crow::request& req) {
         crow::multipart::message msg(req);
         
        
-
+        //Getting name from request 
         std::string name = msg.get_part_by_name("name").body;
         std::cout << "   Name: " << name << std::endl;
 
+        //Getting description from request
         std::string description = msg.get_part_by_name("description").body;
         std::cout << "   Description: " << description << std::endl;
 
+
+        // Getting  binary file data
         auto file_part = msg.get_part_by_name("file");
         auto content_disposition = file_part.get_header_object("Content-Disposition");
         std::cout << "   Content-Disposition: " << content_disposition.value << std::endl;
         
+
         // Safely extract filename
         std::string filename;
         auto it = content_disposition.params.find("filename");
         if (it != content_disposition.params.end()) {
             filename = it->second;
-            std::cout << "   Filename: " << filename << std::endl;
+            std::cout << "Filename: " << filename << std::endl;
         } else {
             std::cout << "   ERROR: No filename found" << std::endl;
             return crow::response(400, "No filename provided");
         }
+        
+
         
         // Extract file data
         std::string file_data = file_part.body;
@@ -48,21 +54,27 @@ crow::response ImageController::uploadImage(const crow::request& req) {
             return crow::response(400, "Invalid image format");
         }
 
+
+        //Load metadata to database
         std::cout << "Загружаємо метадані в базу даних" << std::endl;
         Image new_image(name, description, filename, "", "", "uploaded");
         int image_id = db_manager.createImage(new_image);
         
+        //if database function createImage returns -1 , database doesn't create image 
         if (image_id == -1) {
             std::cout << "   ERROR: Database creation failed" << std::endl;
             return crow::response(500, "Database error");
         }
 
+        //Loading photo on remote storage
         std::cout << "Загружаємо фото на S3" << std::endl;
         r2_manager.uploadImageToR2(filename, file_data ,image_id);
         
       
         std::cout << "Фото збережене " << image_id << std::endl;
         
+
+        // return response
         crow::json::wvalue response; 
         response["id"] = image_id;
         response["url"]  = r2_manager.getPublicURL(filename , image_id);
@@ -73,38 +85,44 @@ crow::response ImageController::uploadImage(const crow::request& req) {
         return crow::response(201, response);
         
     } catch (const std::exception& e) {
-        std::cout << "=== UPLOAD IMAGE EXCEPTION ===" << std::endl;
+
+        // If something wrong  we  log about error
         std::cout << "Exception: " << e.what() << std::endl;
         std::cout << "Exception type: " << typeid(e).name() << std::endl;
         return crow::response(500, std::string("Upload error: ") + e.what());
     } catch (...) {
-        std::cout << "=== UPLOAD IMAGE UNKNOWN EXCEPTION ===" << std::endl;
         return crow::response(500, "Unknown upload error");
     }
 }
+
+
 crow::response ImageController::getAllImages(const crow::request& req) {
     try {
+        // use database manager to images
         auto images = db_manager.getAllImages();
         crow::json::wvalue response;
-        std::cout << "dwadwadwawdwadwda" << std::endl ;
-        
         crow::json::wvalue::list images_list;
         for (const auto& image : images) {
+            // converting every image to json
             crow::json::wvalue img_json;
-            std::cout << "==========" << image.description << std::endl ;
             img_json["id"] = image.id;
             img_json["name"] = image.name;
             img_json["description"] = image.description;
+            // get url using r2_manager , we will get senchuknazar123.online/id-filename
             img_json["url"] =  r2_manager.getPublicURL(image.filename , image.id);
             img_json["status"] = image.status;
             img_json["created_at"] = image.created_at;
+            // push image to list
             images_list.push_back(img_json);
         }
         
         response["images"] = std::move(images_list);
+
+        // returning response with list of images
         return crow::response(200, response);
         
     } catch (const std::exception& e) {
+        //  Return exception , if something wrong 
         return crow::response(500, std::string("Error: ") + e.what());
     }
 }

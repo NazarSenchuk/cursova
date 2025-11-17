@@ -10,7 +10,6 @@ R2Manager::R2Manager(const R2Config& r2_config)
 R2Manager::~R2Manager() = default;
 
 bool R2Manager::testConnect() {
-    std::cout << "=== R2 CONNECTION TEST ===" << std::endl;
     
     try {
         Aws::Client::ClientConfiguration client_config;
@@ -37,15 +36,8 @@ bool R2Manager::testConnect() {
         auto outcome = s3_client.ListObjectsV2(request);
         
         if (outcome.IsSuccess()) {
-            std::cout << "✅ Connected to R2 successfully! Objects in bucket:" << std::endl;
-            auto objects = outcome.GetResult().GetContents();
-            if (objects.empty()) {
-                std::cout << "  - (bucket is empty)" << std::endl;
-            } else {
-                for (const auto& obj : objects) {
-                    std::cout << "  - " << obj.GetKey() << " (" << obj.GetSize() << " bytes)" << std::endl;
-                }
-            }
+            std::cout << "✅ Connected to R2 successfully!" << std::endl;
+
             return true;
         } else {
             std::cerr << "❌ Connection test failed: " << outcome.GetError().GetMessage() << std::endl;
