@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ImageUpload from './components/ImageUpload';
 import ImageGallery from './components/ImageGallery';
 import ImageDetail from './components/ImageDetail';
-import AdminPanel from './components/AdminPanel';
-import Reports from './components/Reports';
+import FamilyArchive from './components/FamilyArchive';
 import { Api } from './services/Api';
 import './App.css';
 
@@ -11,7 +10,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState('gallery');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'detail'
+  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     loadImages();
@@ -22,7 +21,7 @@ function App() {
       const imagesData = await Api.getImages();
       setImages(imagesData);
     } catch (error) {
-      console.error('Error loading images:', error);
+      console.error('Помилка завантаження фото:', error);
     }
   };
 
@@ -30,24 +29,10 @@ function App() {
     setImages(prev => [newImage, ...prev]);
   };
 
-  const handleDeleteImage = async (imageId) => {
-    if (window.confirm('Видалити це зображення?')) {
-      try {
-        await Api.deleteImage(imageId);
-        setImages(prev => prev.filter(img => img.id !== imageId));
-        if (selectedImage && selectedImage.id === imageId) {
-          setSelectedImage(null);
-          setViewMode('grid');
-        }
-      } catch (error) {
-        alert('Помилка видалення: ' + error.message);
-      }
-    }
-  };
-
   const handleImageSelect = (image) => {
     setSelectedImage(image);
     setViewMode('detail');
+    setActiveTab('gallery'); // Перемикаємо на вкладку галереї для відображення деталей
   };
 
   const handleBackToGallery = () => {
@@ -56,7 +41,6 @@ function App() {
   };
 
   const handleProcessingComplete = () => {
-    // Reload images to get updated processing history
     if (selectedImage) {
       loadImageDetail(selectedImage.id);
     }
@@ -64,17 +48,17 @@ function App() {
 
   const loadImageDetail = async (imageId) => {
     try {
-      const imageDetail = await Api.getImageDetail(imageId);
+      const imageDetail = await Api.getImageById(imageId);
       setSelectedImage(imageDetail);
     } catch (error) {
-      console.error('Error loading image detail:', error);
+      console.error('Помилка завантаження деталей фото:', error);
     }
   };
 
   return (
     <div className="App">
       <header style={styles.header}>
-        <h1 style={styles.title}>Фототека - Система обробки зображень</h1>
+        <h1 style={styles.title}>📸 Сімейна Фототека</h1>
         <nav style={styles.nav}>
           <button
             style={{
@@ -87,25 +71,16 @@ function App() {
               setSelectedImage(null);
             }}
           >
-            Галерея
+            🏠 Всі фото
           </button>
           <button
             style={{
               ...styles.navButton,
-              ...(activeTab === 'admin' && styles.activeNavButton)
+              ...(activeTab === 'archive' && styles.activeNavButton)
             }}
-            onClick={() => setActiveTab('admin')}
+            onClick={() => setActiveTab('archive')}
           >
-            Адмін
-          </button>
-          <button
-            style={{
-              ...styles.navButton,
-              ...(activeTab === 'reports' && styles.activeNavButton)
-            }}
-            onClick={() => setActiveTab('reports')}
-          >
-            Звіти
+            📦 Архів
           </button>
         </nav>
       </header>
@@ -119,26 +94,28 @@ function App() {
                 <ImageGallery
                   images={images}
                   onImageSelect={handleImageSelect}
-                  onDeleteImage={handleDeleteImage}
                 />
               </>
             ) : (
               <ImageDetail
                 image={selectedImage}
                 onBack={handleBackToGallery}
-                onDelete={handleDeleteImage}
                 onProcessingComplete={handleProcessingComplete}
               />
             )}
           </>
         )}
 
-        {activeTab === 'admin' && <AdminPanel />}
-        {activeTab === 'reports' && <Reports />}
+        {activeTab === 'archive' && (
+          <FamilyArchive 
+            images={images} 
+            onImageSelect={handleImageSelect}
+          />
+        )}
       </main>
 
       <footer style={styles.footer}>
-        <p>Фототека System © 2024 | AI Image Processing</p>
+        <p>👨‍👩‍👧‍👦 Наша сімейна фототека © {new Date().getFullYear()}</p>
       </footer>
     </div>
   );
@@ -146,44 +123,47 @@ function App() {
 
 const styles = {
   header: {
-    backgroundColor: '#343a40',
+    backgroundColor: '#4a90e2',
     color: 'white',
     padding: '1rem 2rem',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
   },
   title: {
     margin: '0 0 1rem 0',
-    fontSize: '1.5rem'
+    fontSize: '1.8rem',
+    fontWeight: 'bold',
+    textAlign: 'center'
   },
   nav: {
     display: 'flex',
     gap: '10px',
-    flexWrap: 'wrap'
+    justifyContent: 'center'
   },
   navButton: {
-    padding: '8px 16px',
+    padding: '10px 20px',
     backgroundColor: 'transparent',
     color: 'white',
-    border: '1px solid white',
-    borderRadius: '4px',
+    border: '2px solid white',
+    borderRadius: '25px',
     cursor: 'pointer',
+    fontSize: '16px',
     transition: 'all 0.3s ease'
   },
   activeNavButton: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff'
+    backgroundColor: '#357ae8',
+    borderColor: '#357ae8'
   },
   main: {
     padding: '2rem',
-    minHeight: 'calc(100vh - 120px)',
-    backgroundColor: '#f8f9fa'
+    minHeight: 'calc(100vh - 140px)',
+    backgroundColor: '#f0f8ff'
   },
   footer: {
-    backgroundColor: '#343a40',
+    backgroundColor: '#4a90e2',
     color: 'white',
     textAlign: 'center',
     padding: '1rem',
-    width: '100%'
+    fontSize: '14px'
   }
 };
 

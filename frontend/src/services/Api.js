@@ -10,7 +10,56 @@ const API_CONFIG = {
 
 const apiClient = axios.create(API_CONFIG);
 
-export class Api {
+class FamilyPhotoApi {
+  static async getImages() {
+    try {
+      const response = await apiClient.get('/images');
+      return response.data.images || [];
+    } catch (error) {
+      console.error('Помилка завантаження фото:', error);
+      return [];
+    }
+  }
+
+  static async getImageById(imageId) {
+    try {
+      const response = await apiClient.get(`/images/${imageId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Помилка завантаження деталей фото:', error);
+      throw new Error('Не вдалося завантажити фото');
+    }
+  }
+
+  static async uploadImage(file, name, description = '') {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', name);
+      formData.append('description', description);
+
+      const response = await apiClient.post('/images', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000,
+      });
+
+      return {
+        id: response.data.id,
+        filename: response.data.filename,
+        url: response.data.url,
+        name: name,
+        description: description,
+        created_at: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Помилка завантаження:', error);
+      if (error.response && error.response.status === 400) {
+        throw new Error('Невірний формат зображення');
+      }
+      throw new Error('Не вдалося завантажити фото');
+    }
+  }
+
   // Tasks endpoints
   static async getTasks(imageId = null) {
     try {
@@ -24,6 +73,18 @@ export class Api {
     }
   }
 
+  static async downloadSelectedImages(imageIds) {
+    try {
+      const response = await apiClient.post('/download-selected', {
+        image_ids: imageIds
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Помилка створення ZIP архіву:', error);
+      throw new Error('Не вдалося створити архів');
+    }
+  }
   static async createTask(imageId, processingType) {
     try {
       const formData = new FormData();
@@ -43,135 +104,36 @@ export class Api {
       };
     } catch (error) {
       console.error('Error creating task:', error);
-      throw new Error('Failed to create processing task');
-    }
-  }
-
-  // Image endpoints
-  static async getImages() {
-    try {
-      const response = await apiClient.get('/images');
-      return response.data.images || [];
-    } catch (error) {
-      console.error('Error fetching images:', error);
-      return [];
-    }
-  }
-
-  static async getImageById(imageId) {
-    try {
-      const response = await apiClient.get(`/images/${imageId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching image by ID:', error);
-      throw new Error('Failed to fetch image');
-    }
-  }
-
-  static async uploadImage(file, name, description) {
-    try {
-      const formData = new FormData();
-      formData.append('file', file); 
-      formData.append('name', name);
-      formData.append('description', description || '');
-
-      const response = await apiClient.post('/images', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000,
-      });
-
-      return {
-        id: response.data.id,
-        filename: response.data.filename,
-        url: response.data.url,
-        status: response.data.status,
-        name: name,
-        description: description
-      };
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      if (error.response && error.response.status === 400) {
-        throw new Error('Invalid image format. Please use JPG, JPEG, PNG, GIF, or BMP.');
-      }
-      throw new Error('Failed to upload image');
-    }
-  }
-
-  static async deleteImage(imageId) {
-    try {
-      const response = await apiClient.delete(`/images/${imageId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      throw new Error('Failed to delete image');
-    }
-  }
-
-  // Stats endpoint
-  static async getAdminStats() {
-    try {
-      const response = await apiClient.get('/stats');
-      const stats = response.data;
-      return {
-        totalImages: stats.total_images || 0,
-        processedImages: stats.completed || 0,
-        processingQueue: stats.processing || 0,
-        errorCount: stats.error || 0,
-        pendingCount: stats.pending || 0,
-        mostPopularOperation: stats.most_popular_operation || 'None'
-      };
-    } catch (error) {
-      console.error('Error fetching admin stats:', error);
-      return {
-        totalImages: 0,
-        processedImages: 0,
-        processingQueue: 0,
-        errorCount: 0,
-        pendingCount: 0,
-        mostPopularOperation: 'None'
-      };
+      throw new Error('Не вдалося створити завдання обробки');
     }
   }
 }
 
-// Request interceptor
-apiClient.interceptors.request.use(
-  (config) => {
-    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
-    return config;
-  },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
-  }
-);
 
-// Response interceptor
+// Обробники помилок
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      console.error('API Error:', error.response.status, error.response.data);
       switch (error.response.status) {
         case 400:
-          error.message = 'Bad request: ' + (error.response.data || 'Invalid data');
+          error.message = 'Невірні дані';
           break;
         case 404:
-          error.message = 'Resource not found';
+          error.message = 'Не знайдено';
           break;
         case 500:
-          error.message = 'Server error: ' + (error.response.data || 'Internal server error');
+          error.message = 'Помилка сервера';
           break;
         default:
-          error.message = `Request failed with status ${error.response.status}`;
+          error.message = `Помилка: ${error.response.status}`;
       }
     } else if (error.request) {
-      console.error('Network Error:', error.message);
-      error.message = 'Network error: Unable to connect to server';
-    } else {
-      console.error('Error:', error.message);
+      error.message = 'Помилка з\'єднання з сервером';
     }
     
     return Promise.reject(error);
   }
 );
+
+export const Api = FamilyPhotoApi;

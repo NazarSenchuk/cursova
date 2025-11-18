@@ -108,9 +108,7 @@ crow::response ImageController::getAllImages(const crow::request& req) {
             img_json["id"] = image.id;
             img_json["name"] = image.name;
             img_json["description"] = image.description;
-            // get url using r2_manager , we will get senchuknazar123.online/id-filename
-            img_json["url"] =  r2_manager.getPublicURL(image.filename , image.id);
-            img_json["status"] = image.status;
+            img_json["filename"] = image.filename;
             img_json["created_at"] = image.created_at;
             // push image to list
             images_list.push_back(img_json);
@@ -188,7 +186,6 @@ crow::response ImageController::getImageById(const crow::request& req, int id) {
         crow::json::wvalue response;
         response["id"] = image.id;
         response["name"] = image.name;
-        response["url"] =  r2_manager.getPublicURL(image.filename , image.id);
         response["filename"] = image.filename;
         response["status"] = image.status;
         response["description"] = image.description;

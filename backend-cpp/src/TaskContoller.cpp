@@ -63,7 +63,6 @@ crow::response TaskController::getTasks(const crow::request& req , int image_id 
             tsk_json["image_id"] = Task.image_id;
             tsk_json["status"] =  Task.status;
             tsk_json["created_at"]  = Task.created_at;
-            tsk_json["processed_url"]  =  r2_manager.getPublicURL(Task.id , )
             tsk_json["completed_at"] = Task.completed_at;
             tsk_json["duration"] = Task.duration;            
             tsk_json["processing_type"] = Task.processing_type;

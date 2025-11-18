@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Api } from '../services/Api'; // Changed from mockApi to Api
+import { Api } from '../services/Api';
 
 const ImageUpload = ({ onImageUploaded }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -11,26 +11,24 @@ const ImageUpload = ({ onImageUploaded }) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Будь ласка, виберіть файл зображення');
+      alert('📷 Будь ласка, оберіть файл зображення');
       return;
     }
 
-    // Перевірка наявності назви
     if (!name.trim()) {
-      alert('Будь ласка, введіть назву для зображення');
+      alert('✏️ Введіть назву для фото');
       return;
     }
 
     setIsUploading(true);
     try {
-      const newImage = await Api.uploadImage(file, name, description); // Передаємо назву та опис
+      const newImage = await Api.uploadImage(file, name, description);
       onImageUploaded(newImage);
       event.target.value = '';
-      // Очищаємо поля після успішного завантаження
       setName('');
       setDescription('');
     } catch (error) {
-      alert('Помилка завантаження: ' + error.message);
+      alert('❌ Помилка завантаження: ' + error.message);
     } finally {
       setIsUploading(false);
     }
@@ -38,41 +36,33 @@ const ImageUpload = ({ onImageUploaded }) => {
 
   return (
     <div style={styles.uploadContainer}>
-      {/* Поле для назви */}
+      <h3 style={styles.title}>📤 Додати нове сімейне фото</h3>
+      
       <div style={styles.inputGroup}>
-        <label htmlFor="image-name" style={styles.label}>
-          Назва зображення *
-        </label>
+        <label style={styles.label}>📝 Назва фото *</label>
         <input
           type="text"
-          id="image-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isUploading}
           style={styles.textInput}
-          placeholder="Введіть назву зображення"
+          placeholder="Наприклад: Сімейне свято 2024"
           maxLength={100}
         />
       </div>
 
-      {/* Поле для опису */}
       <div style={styles.inputGroup}>
-        <label htmlFor="image-description" style={styles.label}>
-          Опис зображення
-        </label>
-        <textarea
-          id="image-description"
+        <label style={styles.label}>📄 Опис фото (необов'язково)</label>
+        <input
+          type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={isUploading}
-          style={styles.textarea}
-          placeholder="Введіть опис зображення (необов'язково)"
-          maxLength={500}
-          rows={3}
+          style={styles.textInput}
+          maxLength={200}
         />
       </div>
 
-      {/* Завантаження файлу */}
       <div style={styles.uploadGroup}>
         <input
           type="file"
@@ -89,10 +79,10 @@ const ImageUpload = ({ onImageUploaded }) => {
             ...(isUploading || !name.trim() ? styles.disabledButton : {})
           }}
         >
-          {isUploading ? 'Завантаження...' : 'Завантажити фото'}
+          {isUploading ? '⏳ Завантаження...' : '📸 Обрати та завантажити фото'}
         </label>
         {!name.trim() && (
-          <div style={styles.hint}>Введіть назву для завантаження</div>
+          <div style={styles.hint}>✏️ Введіть назву фото для завантаження</div>
         )}
       </div>
     </div>
@@ -102,66 +92,68 @@ const ImageUpload = ({ onImageUploaded }) => {
 const styles = {
   uploadContainer: {
     margin: '20px 0',
-    padding: '20px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    backgroundColor: '#f9f9f9'
+    padding: '25px',
+    border: '2px dashed #4a90e2',
+    borderRadius: '20px',
+    backgroundColor: '#f0f8ff',
+    textAlign: 'center'
+  },
+  title: {
+    margin: '0 0 20px 0',
+    color: '#333',
+    fontSize: '1.3rem'
   },
   inputGroup: {
-    marginBottom: '15px',
+    marginBottom: '20px',
     textAlign: 'left'
   },
   uploadGroup: {
     textAlign: 'center',
-    marginTop: '20px'
+    marginTop: '25px'
   },
   label: {
     display: 'block',
-    marginBottom: '5px',
+    marginBottom: '8px',
     fontWeight: 'bold',
-    color: '#333'
+    color: '#333',
+    fontSize: '14px'
   },
   textInput: {
     width: '100%',
-    padding: '10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
+    padding: '12px 15px',
+    border: '2px solid #4a90e2',
+    borderRadius: '15px',
     fontSize: '16px',
-    boxSizing: 'border-box'
-  },
-  textarea: {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    fontSize: '16px',
-    fontFamily: 'inherit',
-    resize: 'vertical',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    outline: 'none',
+    transition: 'border-color 0.3s ease',
+    backgroundColor: 'white'
   },
   fileInput: {
     display: 'none'
   },
   uploadButton: {
     display: 'inline-block',
-    padding: '12px 24px',
-    backgroundColor: '#007bff',
+    padding: '15px 30px',
+    backgroundColor: '#4a90e2',
     color: 'white',
-    borderRadius: '5px',
+    borderRadius: '25px',
     cursor: 'pointer',
     border: 'none',
     fontSize: '16px',
     fontWeight: 'bold',
-    transition: 'background-color 0.3s'
+    transition: 'all 0.3s ease',
+    boxShadow: '0 4px 15px rgba(74, 144, 226, 0.3)'
   },
   disabledButton: {
-    backgroundColor: '#6c757d',
-    cursor: 'not-allowed'
+    backgroundColor: '#ccc',
+    cursor: 'not-allowed',
+    boxShadow: 'none'
   },
   hint: {
-    marginTop: '8px',
+    marginTop: '10px',
     fontSize: '14px',
-    color: '#6c757d'
+    color: '#666'
   }
 };
 
