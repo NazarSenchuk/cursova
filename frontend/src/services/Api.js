@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+// Get the base URL once
+const getBaseURL = () => {
+  const baseURL = window.env?.VITE_API_URL || import.meta.env.VITE_API_URL;
+  console.log('Using API URL:', baseURL);
+  return baseURL;
+};
+
 const API_CONFIG = {
-  baseURL: import.meta.env.APP_API_URL || 'http://localhost:8080/api', 
+  baseURL: getBaseURL(), // Fixed: baseURL not baseUrl
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -13,10 +20,17 @@ const apiClient = axios.create(API_CONFIG);
 class FamilyPhotoApi {
   static async getImages() {
     try {
+      console.log('Making API call to:', API_CONFIG.baseURL + '/images');
       const response = await apiClient.get('/images');
       return response.data.images || [];
     } catch (error) {
       console.error('Помилка завантаження фото:', error);
+      console.error('Full error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      });
       return [];
     }
   }
@@ -85,6 +99,7 @@ class FamilyPhotoApi {
       throw new Error('Не вдалося створити архів');
     }
   }
+
   static async createTask(imageId, processingType) {
     try {
       const formData = new FormData();
@@ -108,7 +123,6 @@ class FamilyPhotoApi {
     }
   }
 }
-
 
 // Обробники помилок
 apiClient.interceptors.response.use(
