@@ -36,7 +36,7 @@ const ImageUpload = ({ onImageUploaded }) => {
 
   return (
     <div style={styles.uploadContainer}>
-      <h3 style={styles.title}>📤 Додати нове сімейне фото</h3>
+      <h3 style={styles.title}>📤 Додати нове  фото</h3>
       
       <div style={styles.inputGroup}>
         <label style={styles.label}>📝 Назва фото *</label>

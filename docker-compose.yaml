@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  backend-cpp:
+    build:
+      context: .
+      dockerfile: backend-cpp/Dockerfile.dev
+    volumes:
+      - .:/workspaces/cursova
+      - backend-cpp-build:/workspaces/cursova/backend-cpp/build
+    ports:
+      - "${BACKEND_CPP_PORT:-8080}:${BACKEND_CPP_PORT:-8080}"
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-image_processor}
+      - PORT=${BACKEND_CPP_PORT:-8080}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME:-images}
+      - R2_ACCESS_KEY=${R2_ACCESS_KEY}
+      - R2_SECRET_KEY=${R2_SECRET_KEY}
+      - R2_ENDPOINT=${R2_ENDPOINT:-https://your-account.r2.cloudflarestorage.com}
+    network_mode: "host"
+    restart: unless-stopped
+    depends_on:
+      - database
+
+  backend-python:
+    build:
+      context: ./backend-python  
+      dockerfile: Dockerfile
+    volumes:
+    - ./backend-python:/app
+    ports:
+      - "${BACKEND_PYTHON_PORT:-8000}:${BACKEND_PYTHON_PORT:-8000}"
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-image_processor}
+      - R2_BUCKET=${R2_BUCKET_NAME:-images}
+      - R2_ACCESS_KEY=${R2_ACCESS_KEY}
+      - R2_SECRET_KEY=${R2_SECRET_KEY}
+      - R2_ENDPOINT=${R2_ENDPOINT:-https://your-account.r2.cloudflarestorage.com}
+      - R2_REGION=${R2_REGION:-auto}
+    network_mode: "host"
+    restart: unless-stopped
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_API_URL=http://localhost:${BACKEND_CPP_PORT:-8080}/api
+      - VITE_ACCESS_KEY=${R2_ACCESS_KEY}
+      - VITE_SECRET_KEY=${R2_SECRET_KEY}
+    network_mode: "host"
+    restart: unless-stopped
+    entrypoint: ["/app/env.sh"]
+
+  database:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME:-image_processor}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    network_mode: "host"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend-cpp-build:

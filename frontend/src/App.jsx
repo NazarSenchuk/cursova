@@ -32,7 +32,7 @@ function App() {
   const handleImageSelect = (image) => {
     setSelectedImage(image);
     setViewMode('detail');
-    setActiveTab('gallery'); // Перемикаємо на вкладку галереї для відображення деталей
+    setActiveTab('gallery'); 
   };
 
   const handleBackToGallery = () => {
@@ -58,7 +58,7 @@ function App() {
   return (
     <div className="App">
       <header style={styles.header}>
-        <h1 style={styles.title}>📸 Сімейна Фототека</h1>
+        <h1 style={styles.title}> Фототека</h1>
         <nav style={styles.nav}>
           <button
             style={{
@@ -115,7 +115,7 @@ function App() {
       </main>
 
       <footer style={styles.footer}>
-        <p>👨‍👩‍👧‍👦 Наша сімейна фототека © {new Date().getFullYear()}</p>
+        <p> фототека © {new Date().getFullYear()}</p>
       </footer>
     </div>
   );

@@ -76,7 +76,7 @@ const FamilyArchive = ({ images, onImageSelect }) => {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>📦 Сімейний архів</h2>
+      <h2 style={styles.title}> архів</h2>
       
       <div style={styles.controls}>
         <select 

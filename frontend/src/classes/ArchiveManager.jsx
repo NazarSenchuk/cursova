@@ -1,40 +1,53 @@
-import { Api } from '../services/Api';
+import JSZip from "jszip";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export class ArchiveManager {
 
+  static r2 = new S3Client({
+    region: "auto", 
+    endpoint: "https://086cf4cab6f623952bd0831a164dc89b.r2.cloudflarestorage.com",
+    credentials: {
+      accessKeyId: window.env?.VITE_ACCESS_KEY,
+      secretAccessKey: window.env?.VITE_SECRET_KEY
+    }
+  });
 
   /**
-   * Завантажує обрані зображення як ZIP архів
-   * @param {Array} images - Масив об'єктів зображень
-   * @returns {Promise<string>} - URL для завантаження
+   * Створює ZIP і повертає URL для завантаження
    */
   static async downloadImagesAsZip(images) {
-    if (!images || images.length === 0) {
-      throw new Error('Немає обраних зображень для архівування');
+    if (!images?.length) {
+      throw new Error("Немає обраних зображень");
     }
 
-    try {
-      // Отримуємо ID обраних зображень
-      const imageIds = images.map(img => img.id);
-      
-      // Викликаємо API для створення ZIP
-      const response = await this.api.downloadSelectedImages(imageIds);
-      
-      if (!response.downloadUrl) {
-        throw new Error('Не вдалося отримати URL для завантаження');
-      }
-      
-      return response.downloadUrl;
-      
-    } catch (error) {
-      console.error('ArchiveManager error:', error);
-      
-      // Fallback: створюємо простий ZIP на клієнті як резервний варіант
-      if (error.message.includes('з\'єднання') || error.message.includes('сервер')) {
-        return this.createClientSideZip(images);
-      }
-      
-      throw error;
+    const zip = new JSZip();
+
+    for (const img of images) {
+      const key = `original/${img.id}-${img.filename}`;
+
+      // 1. Генеруємо pre-signed URL
+      const url = await getSignedUrl(
+        this.r2,
+        new GetObjectCommand({
+          Bucket: "images",
+          Key: key
+        }),
+        { expiresIn: 60 }
+      );
+
+      // 2. Завантажуємо файл через fetch
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      // 3. Додаємо файл в ZIP
+      zip.file(img.filename, blob);
     }
+
+    // 4. Генеруємо ZIP у пам’яті
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+
+    // 5. Створюємо локальний URL для завантаження
+    return URL.createObjectURL(zipBlob);
   }
 }
