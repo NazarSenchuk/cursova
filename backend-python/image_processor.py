@@ -15,21 +15,21 @@ class ProcessingType(Enum):
     CONTRAST = "contrast"
 
 def process_image(input_path, output_path, processing_type):
-    """Process image based on type using OpenCV"""
+    """Обробка зображення на основі типу з використанням OpenCV"""
     try:
-        print(f"Processing image: {input_path} -> {output_path} with type: {processing_type}")
+        print(f"Обробка зображення: {input_path} -> {output_path} з типом: {processing_type}")
         
-        # Read the image
+        # Читаємо зображення
         if not os.path.exists(input_path):
-            print(f"Input file not found: {input_path}")
+            print(f"Вхідний файл не знайдено: {input_path}")
             return False
             
         image = cv2.imread(input_path)
         if image is None:
-            print(f"Failed to read image: {input_path}")
+            print(f"Не вдалося прочитати зображення: {input_path}")
             return False
         
-        # Process based on type
+        # Обробка на основі типу
         processed_image = None
         
         if processing_type == ProcessingType.WHITE_BLUE.value:
@@ -51,32 +51,32 @@ def process_image(input_path, output_path, processing_type):
         elif processing_type == ProcessingType.CONTRAST.value:
             processed_image = adjust_contrast(image, value=1.5)
         
-        # Save the processed image
+        # Зберігаємо оброблене зображення
         success = cv2.imwrite(output_path, processed_image)
         if not success:
-            print(f"Failed to save processed image: {output_path}")
+            print(f"Не вдалося зберегти оброблене зображення: {output_path}")
             return False
             
-        print(f"Successfully processed and saved: {output_path}")
+        print(f"Успішно оброблено та збережено: {output_path}")
         return True
         
     except Exception as e:
-        print(f"Error processing image: {e}")
+        print(f"Помилка обробки зображення: {e}")
         return False
 
 def apply_white_blue_effect(image):
-    # Convert to float for processing
+    # Конвертуємо у float для обробки
     result = image.astype(np.float32) / 255.0
     
-    # Enhance blue channel, reduce red and green
-    result[:, :, 0] = result[:, :, 0] * 1.2  # Blue
-    result[:, :, 1] = result[:, :, 1] * 0.8  # Green
-    result[:, :, 2] = result[:, :, 2] * 0.8  # Red
+    # Підсилюємо синій канал, зменшуємо червоний та зелений
+    result[:, :, 0] = result[:, :, 0] * 1.2  # Синій
+    result[:, :, 1] = result[:, :, 1] * 0.8  # Зелений
+    result[:, :, 2] = result[:, :, 2] * 0.8  # Червоний
     
-    # Increase brightness for white effect
+    # Збільшуємо яскравість для білого ефекту
     result = cv2.addWeighted(result, 1.2, result, 0, 0.1)
     
-    # Clip values to valid range and convert back
+    # Обрізаємо значення до валідного діапазону та конвертуємо назад
     result = np.clip(result, 0, 1)
     return (result * 255).astype(np.uint8)
 
@@ -125,6 +125,6 @@ def cleanup_files(file_paths):
         try:
             if os.path.exists(path):
                 os.remove(path)
-                print(f"Cleaned up: {path}")
+                print(f"Очищено: {path}")
         except Exception as e:
-            print(f"Cleanup failed {path}: {e}")
+            print(f"Помилка очищення {path}: {e}")

@@ -10,14 +10,14 @@
 #include "config/Config.h"
 
 
-// Class to interact with database
+// Клас для взаємодії з базою даних
 class DatabaseManager {
 private:
-    //unique connection ptr for every connection
+    //унікальне посилання на стрічку підключення
     std::unique_ptr<pqxx::connection> connection;
 
     DatabaseConfig config;
-    // Creates tables inside database
+    // Ініціалізує таблиці в базі даних
     void createTables();
     
 public:
@@ -30,7 +30,7 @@ public:
     
     // CRUD operations
 
-    //Image
+    //Зоображення
     int createImage(const Image& image); 
     Image getImage(int id);
     std::vector<Image> getAllImages();
@@ -39,21 +39,11 @@ public:
                           const std::string& error_msg);
     bool deleteImage(int id);
     
-    //Tasks
+    //Таски
     std::vector<Task> getTasks(const int image_id );
     int createTask(const Task& task);
     
-    // Статистика
-    struct Statistics {
-        int total_images;
-        int pending_count;
-        int processing_count;
-        int completed_count;
-        int error_count;
-        std::string most_popular_operation;
-    };
-    
-    Statistics getStatistics();
+
 };
 
 #endif

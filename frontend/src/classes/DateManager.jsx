@@ -1,12 +1,16 @@
 export class DateManager {
   static formatImageDate(date) {
+    console.log(date)
     const options = {
       year: 'numeric',
       month: 'long',  
       day: 'numeric'
     };
+    let iso = date.replace(' ', 'T');
+    
     const formatter = new Intl.DateTimeFormat('uk-UA', options);
-    return formatter.format(new Date(date));
+    console.log(formatter.format(new Date(iso)))
+    return formatter.format(new Date(iso));
   }
 
   static groupByYear(images) {

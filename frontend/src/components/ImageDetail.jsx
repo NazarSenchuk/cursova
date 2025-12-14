@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Api } from '../services/Api';
+import PhotoApi from '../services/Api';
 
 const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
-  const [activeTab, setActiveTab] = useState('info');
-  const [selectedProcessingType, setSelectedProcessingType] = useState('white-blue');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [tasks, setTasks] = useState([]);
-  const [imageDetail, setImageDetail] = useState(image);
 
+  const [activeTab, setActiveTab] = useState('info'); 
+  const [selectedProcessingType, setSelectedProcessingType] = useState('white-blue');
+  const [isProcessing, setIsProcessing] = useState(false); 
+  const [tasks, setTasks] = useState([]); 
+  const [imageDetail, setImageDetail] = useState(image); 
+
+  // Ефект, який викликається при зміні image - завантажує деталі фото та завдання
   useEffect(() => {
     if (image) {
       loadImageDetail();
@@ -15,24 +17,28 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
     }
   }, [image]);
 
+  // Завантаження детальної інформації про фото з сервера
   const loadImageDetail = async () => {
     try {
-      const detail = await Api.getImageById(image.id);
+      const detail = await PhotoApi.getImageById(image.id);
       setImageDetail(detail);
     } catch (error) {
       console.error('Помилка завантаження деталей фото:', error);
     }
   };
 
+  // Завантаження списку завдань обробки для цього фото
   const loadTasks = async () => {
     try {
-      const tasksData = await Api.getTasks(image.id);
+      const tasksData = await PhotoApi.getTasks(image.id);
+      console.log(tasksData);
       setTasks(tasksData);
     } catch (error) {
       console.error('Помилка завантаження завдань:', error);
     }
   };
 
+  // Масив доступних типів обробки з їх описом
   const processingTypes = [
     { value: 'white-blue', label: 'Біло-синій', description: 'Перетворення в біло-синю палітру' },
     { value: 'grayscale', label: 'Чорно-білий', description: 'Перетворення в чорно-біле зображення' },
@@ -40,12 +46,16 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
     { value: 'invert', label: 'Інверсія', description: 'Інвертування кольорів зображення' },
   ];
 
+  // Обробник створення нового завдання обробки
   const handleProcess = async () => {
     if (!imageDetail) return;
 
     setIsProcessing(true);
     try {
-      await Api.createTask(imageDetail.id, selectedProcessingType);
+      // Створюємо нове завдання обробки
+      console.log("dwa")
+      await PhotoApi.createTask(imageDetail.id, selectedProcessingType);
+      // Оновлюємо список завдань та деталі фото
       await loadTasks();
       await loadImageDetail();
       onProcessingComplete();
@@ -56,11 +66,13 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
     }
   };
 
+  // Отримання читабельної назви типу обробки
   const getProcessingTypeLabel = (processingType) => {
     const type = processingTypes.find(pt => pt.value === processingType);
     return type ? type.label : processingType;
   };
 
+  // Отримання читабельного статусу завдання з емодзі
   const getStatusLabel = (status) => {
     const statusMap = {
       'pending': '⏳ В очікуванні',
@@ -71,16 +83,18 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
     return statusMap[status] || status;
   };
 
+  // Отримання кольору для відображення статусу
   const getStatusColor = (status) => {
     const colorMap = {
-      'pending': '#ffc107',
-      'processing': '#17a2b8',
-      'completed': '#28a745',
-      'error': '#dc3545'
+      'pending': '#ffc107', // Жовтий
+      'processing': '#17a2b8', // Блакитний
+      'completed': '#28a745', // Зелений
+      'error': '#dc3545' // Червоний
     };
-    return colorMap[status] || '#6c757d';
+    return colorMap[status] || '#6c757d'; // Сірий за замовчуванням
   };
 
+  // Функція для завантаження зображення
   const downloadImage = (url, filename) => {
     const link = document.createElement('a');
     link.href = url;
@@ -90,6 +104,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
     document.body.removeChild(link);
   };
 
+  // Якщо фото не знайдено, показуємо повідомлення
   if (!imageDetail) {
     return (
       <div style={styles.emptyState}>
@@ -110,7 +125,9 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
         <h2 style={styles.title}>{imageDetail.name}</h2>
       </div>
 
+      {/* Основний контент - зображення та інформація */}
       <div style={styles.content}>
+        {/* Ліва колонка - зображення та панель обробки */}
         <div style={styles.imageSection}>
           <img
             src={`https://senchuknazar123.online/original/${image.id}-${image.filename}`}
@@ -118,6 +135,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
             style={styles.mainImage}
           />
           
+          {/* Картка обробки фото */}
           <div style={styles.processingCard}>
             <h3 style={styles.cardTitle}>Обробка фото</h3>
             
@@ -136,11 +154,13 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
                 ))}
               </select>
               
+              {/* Опис обраного типу обробки */}
               <div style={styles.processingTypeDescription}>
                 {processingTypes.find(pt => pt.value === selectedProcessingType)?.description}
               </div>
             </div>
 
+            {/* Кнопка запуску обробки */}
             <button
               onClick={handleProcess}
               disabled={isProcessing}
@@ -151,7 +171,9 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
           </div>
         </div>
 
+        {/* Права колонка - інформація та завдання */}
         <div style={styles.infoSection}>
+          {/* Таби для перемикання між інформацією та завданнями */}
           <div style={styles.tabs}>
             <button
               style={{
@@ -173,6 +195,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
             </button>
           </div>
 
+          {/* Вміст активного табу */}
           <div style={styles.tabContent}>
             {activeTab === 'info' && (
               <div>
@@ -207,6 +230,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
                 <h3>📋 Завдання обробки</h3>
                 {tasks.length > 0 ? (
                   <div style={styles.tasksList}>
+                    {/* Список завдань */}
                     {tasks.map(task => (
                       <div key={task.id} style={styles.taskCard}>
                         <div style={styles.taskHeader}>
@@ -228,6 +252,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
                           </div>
                         </div>
 
+                        {/* Якщо завдання завершене, показуємо результат */}
                         {task.status === 'completed' && (
                           <div style={styles.completedTask}>
                             <div style={styles.processedImageSection}>
@@ -271,6 +296,7 @@ const ImageDetail = ({ image, onBack, onProcessingComplete }) => {
   );
 };
 
+// Стилі компонента (inline styles)
 const styles = {
   container: { 
     padding: '20px', 

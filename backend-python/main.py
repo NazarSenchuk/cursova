@@ -11,108 +11,104 @@ def process_single_task(task):
     filename = task['filename']
     processing_type = task['processing_type']
     
-    print(f"\n=== Task Processing {task_id} ===")
+    print(f"\n=== Обробка завдання {task_id} ===")
     
-    # temp image saving 
+    # Тимчасові файли для збереження
     temp_input = f"temp_input_{task_id}_{filename}"
     temp_output = f"temp_output_{task_id}_{filename}"
     
-    # R2 paths
+    # Шляхи в R2
     r2_input_path = f"original/{image_id}-{filename}"
     r2_output_path = f"processed/{task_id}-{filename}"
     
-
     try:
-        # Check which step we need to resume from
+        # Визначаємо з якого кроку продовжити
         current_step = determine_current_step(task_id, temp_input, temp_output)
         
         if current_step == "download":
-            print(f" Resuming task {task_id} from download step")
-            # Step 2: Download from R2
+            print(f" Продовження завдання {task_id} з кроку завантаження")
+            # Крок 2: Завантаження з R2
             if not download_from_r2(r2_input_path, temp_input):
-                raise Exception("Download failed")
+                raise Exception("Помилка завантаження")
             current_step = "process"
         
         if current_step == "process":
-            print(f" Resuming task {task_id} from processing step")
-            # Step 3: Process image
+            print(f" Продовження завдання {task_id} з кроку обробки")
+            # Крок 3: Обробка зображення
             if not process_image(temp_input, temp_output, processing_type):
-                raise Exception("Processing failed")
+                raise Exception("Помилка обробки")
             current_step = "upload"
         
         if current_step == "upload":
-            print(f"Resuming task {task_id} from upload step")
-            # Step 4: Upload to R2 processed folder
+            print(f"Продовження завдання {task_id} з кроку завантаження")
+            # Крок 4: Завантаження в R2 у папку processed
             if not upload_to_r2(temp_output, r2_output_path):
-                raise Exception("Upload failed")
+                raise Exception("Помилка завантаження")
         
-        # Step 5: Update database to completed
+        # Крок 5: Оновлення статусу в базі даних на "completed"
         update_task_status(task_id, "completed", r2_output_path)
         
-        print(f"Task {task_id} completed successfully!")
+        print(f"Завдання {task_id} успішно завершено!")
         return True
         
     except Exception as e:
-        print(f"Task {task_id} failed: {e}")
+        print(f"Завдання {task_id} невдале: {e}")
         update_task_status(task_id, "failed")
         return False
         
     finally:
-        # Cleanup temp files only if task completed or failed
+        # Очищення тимчасових файлів тільки якщо завдання завершено або невдале
         if not os.path.exists(temp_input) and not os.path.exists(temp_output):
             cleanup_files([temp_input, temp_output])
 
 def determine_current_step(task_id, temp_input_path, temp_output_path):
-    # Check if output file already exists (upload was in progress)
+    # Перевіряємо чи вихідний файл вже існує (завантаження було в процесі)
     if os.path.exists(temp_output_path):
-        print(f"Output file exists, resuming from upload step")
+        print(f"Вихідний файл існує, продовження з кроку завантаження")
         return "upload"
     
-    # Check if input file exists (processing was in progress)
+    # Перевіряємо чи вхідний файл існує (обробка була в процесі)
     elif os.path.exists(temp_input_path):
-        print(f"Input file exists, resuming from processing step")
+        print(f"Вхідний файл існує, продовження з кроку обробки")
         return "process"
     
-    # Otherwise start from download
+    # Інакше починаємо з завантаження
     else:
-        print(f"No temp files found, starting from download step")
+        print(f"Тимчасових файлів не знайдено, починаємо з кроку завантаження")
         return "download"
 
-
-
 def process_pending_tasks():
-    
     pending_tasks = get_pending_tasks()
     
     for task in pending_tasks:
         task_id = task['task_id']
         
-        # First update status to processing
+        # Спочатку оновлюємо статус на "processing"
         update_task_status(task_id, "processing")
         
-        # Then process with the same function
+        # Потім обробляємо з тією ж функцією
         process_single_task(task)
 
 if __name__ == "__main__":
-    # Create temp directory if needed
+    # Створюємо тимчасову директорію якщо потрібно
     if not os.path.exists('temp'):
         os.makedirs('temp')
     
-    print("Start python")
+    print("Запуск Python обробника")
     while True:
         
-        # Step 1: First, recover any stuck processing tasks
+        # Крок 1: Спочатку відновлюємо будь-які "застряглі" завдання в обробці
         processing_tasks = get_processing_tasks()
         
         if processing_tasks:
-            print(f"Found {len(processing_tasks)} tasks in processing status. Recovering...")
+            print(f"Знайдено {len(processing_tasks)} завдань в статусі обробки. Відновлення...")
             for task in processing_tasks:
                 process_single_task(task)
         
-        # Step 2: Then process new pending tasks
+        # Крок 2: Потім обробляємо нові завдання в очікуванні
         process_pending_tasks()
         
-        # Wait before next iteration
-        print("No tasks to process. Waiting 10 seconds")
+        # Чекаємо перед наступною ітерацією
+        print("Немає завдань для обробки. Очікування 10 секунд")
         time.sleep(10)
         

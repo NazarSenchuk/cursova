@@ -9,53 +9,54 @@ TaskController::TaskController(DatabaseManager& db, R2Manager& r2_manager)
     : db_manager(db), r2_manager(r2_manager) {
 }
 
-
-
 crow::response TaskController::createTask(const crow::request& req) {
-    std::cout << "=== Початок оброблення фото ===" << std::endl;
+    std::cout << "=== Початок створення завдання ===" << std::endl;
     try {
-        
-        // Parse multipart form data
+        // Парсинг multipart form data з запиту
         crow::multipart::message msg(req);
+        
+        // Отримання ID зображення з тіла запиту
         int image_id = std::stoi(msg.get_part_by_name("image_id").body);
         std::cout << "   Image_id: " << image_id << std::endl;
 
+        // Отримання типу обробки з тіла запиту
         std::string processing_type = msg.get_part_by_name("processing_type").body;
         std::cout << "   Processing_type: " << processing_type << std::endl;
 
-        std::cout << "Saving task to database" << std::endl;
-        Task new_Task(image_id , processing_type, "pending");
+        // Збереження завдання в базі даних
+        std::cout << "Збереження завдання в базі даних" << std::endl;
+        Task new_Task(image_id , processing_type, "pending");  // Статус "очікує"
         int Task_id = db_manager.createTask(new_Task);
         
+        // Перевірка успішності створення завдання
         if (Task_id == -1) {
-            std::cout << "   ERROR: Database creation failed" << std::endl;
-            return crow::response(500, "Database error");
+            std::cout << "   ПОМИЛКА: Помилка створення в базі даних" << std::endl;
+            return crow::response(500, "Помилка бази даних");
         }     
       
-        std::cout << "Task saved" << Task_id << std::endl;
+        std::cout << "Завдання збережене " << Task_id << std::endl;
         
+        // Формування успішної відповіді
         crow::json::wvalue response; 
         response["image_id"] = image_id;
         response["id"] = Task_id ;
         response["processing_type"] = processing_type;
         response["status"] = "pending";        
-        return crow::response(201, response);
+        return crow::response(201, response);  // 201 Created
         
     } catch (const std::exception& e) {
-        std::cout << "=== UPLOAD Task EXCEPTION ===" << std::endl;
-        std::cout << "Exception: " << e.what() << std::endl;
-        std::cout << "Exception type: " << typeid(e).name() << std::endl;
-        return crow::response(500, std::string("Upload error: ") + e.what());
-    } catch (...) {
-        std::cout << "=== UPLOAD Task UNKNOWN EXCEPTION ===" << std::endl;
-        return crow::response(500, "Unknown upload error");
+        // Обробка винятків з детальним логуванням
+        return crow::response(500, std::string("Помилка завантаження: ") + e.what());
     }
 }
+
 crow::response TaskController::getTasks(const crow::request& req , int image_id ) {
     try {
+        // Отримання завдань з бази даних
         auto Tasks = db_manager.getTasks(image_id );
         crow::json::wvalue response;
         
+        // Формування списку завдань у форматі JSON
         crow::json::wvalue::list Tasks_list;
         for (const auto& Task : Tasks) {
             crow::json::wvalue tsk_json;
@@ -66,13 +67,14 @@ crow::response TaskController::getTasks(const crow::request& req , int image_id 
             tsk_json["completed_at"] = Task.completed_at;
             tsk_json["duration"] = Task.duration;            
             tsk_json["processing_type"] = Task.processing_type;
-            Tasks_list.push_back(tsk_json);
+            Tasks_list.push_back(tsk_json);  // Додавання завдання до списку
         }
         
-        response["tasks"] = std::move(Tasks_list);
-        return crow::response(200, response);
+        response["tasks"] = std::move(Tasks_list);  // Переміщення списку у відповідь
+        return crow::response(200, response);  // 200 OK
         
     } catch (const std::exception& e) {
-        return crow::response(500, std::string("Error: ") + e.what());
+        // Обробка помилок при отриманні завдань
+        return crow::response(500, std::string("Помилка: ") + e.what());
     }
 }

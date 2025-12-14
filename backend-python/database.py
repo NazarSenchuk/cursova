@@ -5,7 +5,7 @@ def get_db_connection():
     return psycopg2.connect(**DB_CONFIG)
 
 def get_processing_tasks():
-    """Get all tasks with processing status (for recovery)"""
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -19,7 +19,7 @@ def get_processing_tasks():
     cursor.execute(query)
     tasks = cursor.fetchall()
     
-    # Convert to list of dictionaries
+
     columns = [desc[0] for desc in cursor.description]
     tasks = [dict(zip(columns, row)) for row in tasks]
     
@@ -30,7 +30,6 @@ def get_processing_tasks():
     return tasks
 
 def get_pending_tasks():
-    """Get all pending tasks with image info"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -44,7 +43,6 @@ def get_pending_tasks():
     cursor.execute(query)
     tasks = cursor.fetchall()
     
-    # Convert to list of dictionaries
     columns = [desc[0] for desc in cursor.description]
     tasks = [dict(zip(columns, row)) for row in tasks]
     
@@ -55,7 +53,6 @@ def get_pending_tasks():
     return tasks
 
 def update_task_status(task_id, status, processed_path=None):
-    """Update task status in database"""
     conn = get_db_connection()
     cursor = conn.cursor()
     

@@ -2,63 +2,70 @@ import React, { useState, useMemo } from 'react';
 import { DateManager } from '../classes/DateManager';
 import { ArchiveManager } from '../classes/ArchiveManager';
 
-const FamilyArchive = ({ images, onImageSelect }) => {
-    const [selectedPeriod, setSelectedPeriod] = useState('recent');
+const Archive = ({ images, onImageSelect }) => {
+
+    const [selectedPeriod, setSelectedPeriod] = useState('recent'); 
     const [selectedImages, setSelectedImages] = useState([]);
-    const [isDownloading, setIsDownloading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false); 
   
+    //групування фото по періодах 
     const periodGroups = useMemo(() => {
       return DateManager.getAllPeriodGroups(images);
     }, [images]);
 
+  // Обробник вибору/скасування вибору окремого фото
   const handleImageSelect = (imageId, isSelected) => {
     if (isSelected) {
-      setSelectedImages(prev => [...prev, imageId]);
+      setSelectedImages(prev => [...prev, imageId]); // Додаємо ID до вибраних
     } else {
-      setSelectedImages(prev => prev.filter(id => id !== imageId));
+      setSelectedImages(prev => prev.filter(id => id !== imageId)); // Видаляємо ID з вибраних
     }
   };
 
+  // Обробник кліку на фото - відкриває детальний перегляд, якщо клік не на чекбоксі
   const handleImageClick = (image, event) => {
     if (event.target.type === 'checkbox') {
-      return; 
+      return; // Ігноруємо кліки на чекбоксі
     }
     console.log('Перехід до деталей фото:', image.id);
-    onImageSelect(image);
+    onImageSelect(image); // Викликаємо колбек для відкриття детального перегляду
   };
 
+  // Обрати всі фото в поточному періоді
   const handleSelectAll = () => {
     const currentImages = periodGroups[selectedPeriod]?.images || [];
-    setSelectedImages(currentImages.map(img => img.id));
+    setSelectedImages(currentImages.map(img => img.id)); // Встановлюємо всі ID фото поточного періоду
   };
 
+  // Скасувати вибір всіх фото
   const handleDeselectAll = () => {
-    setSelectedImages([]);
+    setSelectedImages([]); // Очищаємо масив обраних фото
   };
 
+  // Основна функція створення та завантаження ZIP архіву
   const downloadSelectedAsZip = async () => {
     if (selectedImages.length === 0) {
       alert('Оберіть фото для архівування');
       return;
     }
 
-    setIsDownloading(true);
+    setIsDownloading(true); // Вмикаємо стан завантаження
     
     try {
       const selectedImageObjects = images.filter(img => selectedImages.includes(img.id));
       
-      // Використовуємо ArchiveManager для створення ZIP
+      // Використовуємо ArchiveManager для створення ZIP архіву
       const downloadUrl = await ArchiveManager.downloadImagesAsZip(selectedImageObjects);
       
-      // Створюємо посилання для завантаження
+      // Створюємо тимчасове посилання для завантаження
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `family-photos-${new Date().toISOString().split('T')[0]}.zip`;
+      a.download = `photos-${new Date().toISOString().split('T')[0]}.zip`; // Назва файлу з поточною датою
       document.body.appendChild(a);
-      a.click();
+      a.click(); // Імітуємо клік для завантаження
       document.body.removeChild(a);
       
-      // Очищаємо URL після завантаження
+      // Очищаємо URL після завантаження (через 100мс)
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
       
       alert(`📦 Готово! Завантажено ${selectedImages.length} фото`);
@@ -68,10 +75,11 @@ const FamilyArchive = ({ images, onImageSelect }) => {
       console.error('Помилка створення архіву:', error);
       alert('❌ Помилка створення архіву: ' + error.message);
     } finally {
-      setIsDownloading(false);
+      setIsDownloading(false); 
     }
   };
 
+  // Поточна обрана група фото для відображення
   const currentGroup = periodGroups[selectedPeriod];
 
   return (
@@ -79,21 +87,24 @@ const FamilyArchive = ({ images, onImageSelect }) => {
       <h2 style={styles.title}> архів</h2>
       
       <div style={styles.controls}>
+        {/* Селектор вибору періоду */}
         <select 
           value={selectedPeriod} 
           onChange={(e) => {
-            setSelectedPeriod(e.target.value);
-            setSelectedImages([]);
+            setSelectedPeriod(e.target.value); // Змінюємо період
+            setSelectedImages([]); // Очищаємо вибір при зміні періоду
           }}
           style={styles.periodSelect}
         >
           <option value="recent">📅 Останній тиждень</option>
           <option value="month">📅 Останній місяць</option>
           
+          {/* Динамічні опції для місяців */}
           {DateManager.getSortedMonths(images).map(([key, group]) => (
             <option key={key} value={key}>📅 {group.name}</option>
         ))}
         
+        {/* Динамічні опції для років */}
         {DateManager.getSortedYears(images).map(([year, yearImages]) => (
             <option key={`year-${year}`} value={`year-${year}`}>
             📅 Рік {year} ({yearImages.length} фото)
@@ -101,6 +112,7 @@ const FamilyArchive = ({ images, onImageSelect }) => {
         ))}
         </select>
 
+        {/* Панель дій для обраних фото (показується тільки якщо є обрані фото) */}
         {selectedImages.length > 0 && (
           <div style={styles.archiveActions}>
             <span style={styles.selectedCount}>
@@ -131,6 +143,7 @@ const FamilyArchive = ({ images, onImageSelect }) => {
         
         {currentGroup?.images.length > 0 ? (
           <div style={styles.gallery}>
+            {/* Кнопки масового вибору */}
             <div style={styles.bulkActions}>
               <button 
                 onClick={handleSelectAll}
@@ -148,29 +161,33 @@ const FamilyArchive = ({ images, onImageSelect }) => {
               )}
             </div>
 
+            {/* Сітка з фото поточного періоду */}
             <div style={styles.imagesGrid}>
               {currentGroup.images.map(image => (
                 <div 
                   key={image.id} 
                   style={{
                     ...styles.imageCard,
-                    ...(selectedImages.includes(image.id) && styles.selectedImageCard)
+                    ...(selectedImages.includes(image.id) && styles.selectedImageCard) // Підсвічуємо обране фото
                   }}
                   onClick={(e) => handleImageClick(image, e)}
                 >
+                  {/* Чекбокс для вибору фото */}
                   <input
                     type="checkbox"
                     checked={selectedImages.includes(image.id)}
                     onChange={(e) => handleImageSelect(image.id, e.target.checked)}
                     style={styles.checkbox}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()} // Запобігаємо всплиттю події до батьківського елемента
                   />
+                  {/* Прев'ю фото */}
                   <img
                     src={`https://senchuknazar123.online/original/${image.id}-${image.filename}`}
                     alt={image.name}
                     style={styles.image}
-                    loading="lazy"
+                    loading="lazy" // Ліниве завантаження для оптимізації
                   />
+                  {/* Інформація про фото */}
                   <div style={styles.imageInfo}>
                     <div style={styles.imageName}>{image.name}</div>
                     <div style={styles.imageDate}>
@@ -182,6 +199,7 @@ const FamilyArchive = ({ images, onImageSelect }) => {
             </div>
           </div>
         ) : (
+          // Повідомлення якщо немає фото в обраному періоді
           <div style={styles.emptyState}>
             <p>📷 Немає фото за обраний період</p>
             <p style={styles.hint}>Завантажте нові фото у вкладці "🏠 Всі фото"</p>
@@ -192,6 +210,7 @@ const FamilyArchive = ({ images, onImageSelect }) => {
   );
 };
 
+// Inline стилі компонента
 const styles = {
   container: {
     padding: '20px',
@@ -302,7 +321,7 @@ const styles = {
   },
   imagesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', // Адаптивна сітка
     gap: '25px'
   },
   imageCard: {
@@ -316,22 +335,22 @@ const styles = {
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
   },
   selectedImageCard: {
-    borderColor: '#4caf50',
+    borderColor: '#4caf50', // Зелена рамка для обраних фото
     boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
-    transform: 'translateY(-2px)'
+    transform: 'translateY(-2px)' // Легкий ефект підняття
   },
   checkbox: {
     position: 'absolute',
     top: '12px',
     left: '12px',
-    transform: 'scale(1.4)',
+    transform: 'scale(1.4)', // Збільшений чекбокс
     zIndex: 1,
-    accentColor: '#4caf50'
+    accentColor: '#4caf50' // Зелений колір чекбокса
   },
   image: {
     width: '100%',
     height: '160px',
-    objectFit: 'cover',
+    objectFit: 'cover', // Заповнення контейнера зі збереженням пропорцій
     transition: 'transform 0.3s ease'
   },
   imageInfo: {
@@ -361,4 +380,4 @@ const styles = {
   }
 };
 
-export default FamilyArchive;
+export default Archive;

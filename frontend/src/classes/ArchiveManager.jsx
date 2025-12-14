@@ -8,8 +8,8 @@ export class ArchiveManager {
     region: "auto", 
     endpoint: "https://086cf4cab6f623952bd0831a164dc89b.r2.cloudflarestorage.com",
     credentials: {
-      accessKeyId: window.env?.VITE_ACCESS_KEY,
-      secretAccessKey: window.env?.VITE_SECRET_KEY
+      accessKeyId: "04d7b1d006c66373a5f989eacb72e58e",
+      secretAccessKey: "0d16a302e2262503ffd774240e2875a86de91b2fc70ffdaf55f5784bac97200d"
     }
   });
 

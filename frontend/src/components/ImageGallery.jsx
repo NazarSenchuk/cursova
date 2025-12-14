@@ -1,7 +1,7 @@
 import React from 'react';
 import {DateManager} from "../classes/DateManager.jsx"
 const ImageGallery = ({ images, onImageSelect }) => {
-  if (images.length === 0) {
+  if (images.length === 0) {  // Показувати що немає завантажених фото
     return (
       <div style={styles.emptyState}>
         <p>📷 Ще немає завантажених фото</p>
@@ -13,8 +13,8 @@ const ImageGallery = ({ images, onImageSelect }) => {
   return (
     <div style={styles.gallery}>
       <h3 style={styles.galleryTitle}>📂 Всі фото ({images.length})</h3>
-      <div style={styles.imagesGrid}>
-        {images.map(image => (
+      <div style={styles.imagesGrid}> 
+        {images.map(image => (    //  Робимо ітерацію  по кожному фото та відображаємо
           <div 
             key={image.id} 
             style={styles.imageCard}

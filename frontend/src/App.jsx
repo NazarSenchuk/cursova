@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ImageUpload from './components/ImageUpload';
 import ImageGallery from './components/ImageGallery';
 import ImageDetail from './components/ImageDetail';
-import FamilyArchive from './components/FamilyArchive';
-import { Api } from './services/Api';
+import Archive from './components/Archive';
+import PhotoApi  from './services/Api';
 import './App.css';
 
 function App() {
@@ -11,30 +11,30 @@ function App() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState('gallery');
   const [viewMode, setViewMode] = useState('grid');
-
+// Загрузка всіх фото при загрузці сайту
   useEffect(() => {
     loadImages();
   }, []);
-
+  // Загрузка всіх фото
   const loadImages = async () => {
     try {
-      const imagesData = await Api.getImages();
-      setImages(imagesData);
+      const imagesData = await PhotoApi.getImages();
+      setImages(imagesData.images);
     } catch (error) {
       console.error('Помилка завантаження фото:', error);
     }
   };
-
+  // Додавання нового зоображення після загрузки фото
   const handleImageUploaded = (newImage) => {
-    setImages(prev => [newImage, ...prev]);
+    loadImages();
   };
-
+  // Перехід до деталей фото
   const handleImageSelect = (image) => {
     setSelectedImage(image);
     setViewMode('detail');
     setActiveTab('gallery'); 
   };
-
+  // Перехід до назад 
   const handleBackToGallery = () => {
     setViewMode('grid');
     setSelectedImage(null);
@@ -45,10 +45,10 @@ function App() {
       loadImageDetail(selectedImage.id);
     }
   };
-
+  // Завантаження  з апі деталей про фото 
   const loadImageDetail = async (imageId) => {
     try {
-      const imageDetail = await Api.getImageById(imageId);
+      const imageDetail = await PhotoApi.getImageById(imageId);
       setSelectedImage(imageDetail);
     } catch (error) {
       console.error('Помилка завантаження деталей фото:', error);
@@ -86,8 +86,9 @@ function App() {
       </header>
 
       <main style={styles.main}>
-        {activeTab === 'gallery' && (
-          <>
+      
+        {activeTab === 'gallery' && (        // Відображення галереї або  деталей фото якщо viewMode = grid
+          <> 
             {viewMode === 'grid' ? (
               <>
                 <ImageUpload onImageUploaded={handleImageUploaded} />
@@ -106,17 +107,13 @@ function App() {
           </>
         )}
 
-        {activeTab === 'archive' && (
-          <FamilyArchive 
+        {activeTab === 'archive' && ( // Відображення archive
+          <Archive 
             images={images} 
             onImageSelect={handleImageSelect}
           />
         )}
       </main>
-
-      <footer style={styles.footer}>
-        <p> фототека © {new Date().getFullYear()}</p>
-      </footer>
     </div>
   );
 }

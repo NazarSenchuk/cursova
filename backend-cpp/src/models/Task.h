@@ -15,13 +15,10 @@ public:
     std::string duration;
     Task();
     
-    // Constructor for new Task
     Task(int image_id, const std::string& processing_type, const std::string& status);
     
-    //function to convert to JSON format
     std::string toJson() const;
     
-    // Get  from postgresql resutl
     void fromPgResult(const pqxx::row& row);
 };
 

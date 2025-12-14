@@ -3,39 +3,34 @@
 #include <sstream>
 #include <exception>
 
-
-
 DatabaseManager::DatabaseManager(const DatabaseConfig& db_config) 
     : config(db_config) {
 }
 
-
-// Database connection
+// Підключення до бази даних
 bool DatabaseManager::connect() {
     try {
         connection = std::make_unique<pqxx::connection>(config.getConnectionString());
         if (connection->is_open()) {
-            std::cout << "Connected to PostgreSQL database: " << config.name << std::endl;
+            std::cout << "Підключено до PostgreSQL бази даних: " << config.name << std::endl;
             createTables();
             return true;
         } else {
-            std::cerr << "Failed to connect to database" << std::endl;
+            std::cerr << "Не вдалося підключитися до бази даних" << std::endl;
             return false;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Database connection error: " << e.what() << std::endl;
+        std::cerr << "Помилка підключення до бази даних: " << e.what() << std::endl;
         return false;
     }
 }
 
-
-
-// Database connection check
+// Перевірка підключення до бази даних
 bool DatabaseManager::isConnected() const {
     return connection && connection->is_open();
 }
 
-// Init Tables
+// Ініціалізація таблиць
 void DatabaseManager::createTables() {
     try {
         pqxx::work txn(*connection);
@@ -80,17 +75,16 @@ void DatabaseManager::createTables() {
         txn.exec(createTableSQL);
         txn.commit();
         
-        std::cout << "Database tables created/verified successfully" << std::endl;
+        std::cout << "Таблиці бази даних успішно створені/перевірені" << std::endl;
         
     } catch (const std::exception& e) {
-        std::cerr << "Table creation error: " << e.what() << std::endl;
+        std::cerr << "Помилка створення таблиць: " << e.what() << std::endl;
     }
 }
 
+// ОПЕРАЦІЇ З ЗОБРАЖЕННЯМИ ---------
 
-// IMAGE OPERATIONS ---------
-
-// Image Creating 
+// Створення зображення
 int DatabaseManager::createImage(const Image& image) {
     try {
         pqxx::work txn(*connection);
@@ -108,7 +102,7 @@ int DatabaseManager::createImage(const Image& image) {
         
         txn.commit();
         
-        // return id 
+        // Повернення ID
         if (!result.empty()) {
             return result[0][0].as<int>();
         }
@@ -116,11 +110,12 @@ int DatabaseManager::createImage(const Image& image) {
         return -1;
         
     } catch (const std::exception& e) {
-        std::cerr << "Create image error: " << e.what() << std::endl;
+        std::cerr << "Помилка створення зображення: " << e.what() << std::endl;
         return -1;
     }
 }
-//Get Image by id 
+
+// Отримання зображення за ID
 Image DatabaseManager::getImage(int id) {
     try {
         pqxx::nontransaction txn(*connection);
@@ -134,14 +129,15 @@ Image DatabaseManager::getImage(int id) {
             return image;
         }
         
-        return Image(); 
+        return Image(); // Повертаємо пусте зображення якщо не знайдено
         
     } catch (const std::exception& e) {
-        std::cerr << "Get image error: " << e.what() << std::endl;
+        std::cerr << "Помилка отримання зображення: " << e.what() << std::endl;
         return Image();
     }
 }
-//Get all Images
+
+// Отримання всіх зображень
 std::vector<Image> DatabaseManager::getAllImages() {
     std::vector<Image> images;
     
@@ -158,12 +154,13 @@ std::vector<Image> DatabaseManager::getAllImages() {
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "Get all images error: " << e.what() << std::endl;
+        std::cerr << "Помилка отримання всіх зображень: " << e.what() << std::endl;
     }
     
     return images;
 }
-//Get image by status
+
+// Отримання зображень за статусом
 std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status) {
     std::vector<Image> images;
     
@@ -180,12 +177,13 @@ std::vector<Image> DatabaseManager::getImagesByStatus(const std::string& status)
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "Get images by status error: " << e.what() << std::endl;
+        std::cerr << "Помилка отримання зображень за статусом: " << e.what() << std::endl;
     }
     
     return images;
 }
-//  Update Image status 
+
+// Оновлення статусу зображення
 bool DatabaseManager::updateImageStatus(int id, const std::string& status, 
                                        const std::string& error_msg ) {
     try {
@@ -203,36 +201,33 @@ bool DatabaseManager::updateImageStatus(int id, const std::string& status,
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "Update image status error: " << e.what() << std::endl;
+        std::cerr << "Помилка оновлення статусу зображення: " << e.what() << std::endl;
         return false;
     }
 }
 
+// ОПЕРАЦІЇ З ЗАВДАННЯМИ-----
 
-
-
-// TASK OPERATIONS-----
-
-// Creating task
+// Створення завдання
 int DatabaseManager::createTask(const Task& task) {
     try {
         pqxx::work txn(*connection);
 
-        // Fixed: INSERT INTO tasks (not images)
+        // Виправлено: INSERT INTO tasks (не images)
         std::string sql = R"(
             INSERT INTO tasks (processing_type, status, image_id)
             VALUES ($1, $2, $3)
             RETURNING id
         )";
         
-        // Fixed: removed extra comma
+        // Виправлено: видалено зайву кому
         pqxx::result result = txn.exec_params(
             sql, task.processing_type, task.status, task.image_id
         );
         
         txn.commit();
         
-        // Return id
+        // Повернення ID
         if (!result.empty()) {
             return result[0][0].as<int>();
         }
@@ -240,10 +235,12 @@ int DatabaseManager::createTask(const Task& task) {
         return -1;
         
     } catch (const std::exception& e) {
-        std::cerr << "Create task error: " << e.what() << std::endl;
+        std::cerr << "Помилка створення завдання: " << e.what() << std::endl;
         return -1;
     }
 }
+
+// Отримання завдань для зображення
 std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
     std::vector<Task> tasks;
     
@@ -260,65 +257,8 @@ std::vector<Task> DatabaseManager::getTasks(const int image_id ) {
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "Get all tasks error: " << e.what() << std::endl;
+        std::cerr << "Помилка отримання всіх завдань: " << e.what() << std::endl;
     }
     
     return tasks;
-}
-
-
-
-
-
-// STATISTIC OPERATIONS
-DatabaseManager::Statistics DatabaseManager::getStatistics() {  // ВИНЕСТИ  В ІНШУ ЛОГІКУ
-    Statistics stats = {0}; 
-    
-    try {
-        pqxx::nontransaction txn(*connection);
-        
-        // Загальна кількість
-        std::string count_sql = "SELECT COUNT(*) FROM images";
-        pqxx::result count_result = txn.exec(count_sql);
-        if (!count_result.empty()) {
-            stats.total_images = count_result[0][0].as<int>();
-        }
-        
-        // Кількість по статусах
-        std::string status_sql = R"(
-            SELECT status, COUNT(*) 
-            FROM images 
-            GROUP BY status
-        )";
-        pqxx::result status_result = txn.exec(status_sql);
-        
-        for (const auto& row : status_result) {
-            std::string status = row[0].as<std::string>();
-            int count = row[1].as<int>();
-            
-            if (status == "pending") stats.pending_count = count;
-            else if (status == "processing") stats.processing_count = count;
-            else if (status == "completed") stats.completed_count = count;
-            else if (status == "error") stats.error_count = count;
-        }
-        
-        // Найпопулярніша операція
-        std::string op_sql = R"(
-            SELECT operation, COUNT(*) as count 
-            FROM images 
-            WHERE operation != '' 
-            GROUP BY operation 
-            ORDER BY count DESC 
-            LIMIT 1
-        )";
-        pqxx::result op_result = txn.exec(op_sql);
-        if (!op_result.empty()) {
-            stats.most_popular_operation = op_result[0][0].as<std::string>();
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Get statistics error: " << e.what() << std::endl;
-    }
-    
-    return stats;
 }

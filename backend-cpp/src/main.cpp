@@ -73,13 +73,7 @@ int main() {
         ([&image_controller](const crow::request& req, int id) {
             return image_controller.getImageById(req, id);
         });
-    
-    CROW_ROUTE(app, "/api/stats")
-        .methods("GET"_method)
-        ([&image_controller](const crow::request& req) {
-            return image_controller.getStats(req);
-        });
-    
+
     CROW_ROUTE(app, "/api/images/status/<string>")
         .methods("GET"_method)
         ([&image_controller](const crow::request& req, const std::string& status) {

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Api } from '../services/Api';
+import  PhotoApi from '../services/Api';
 
-const ImageUpload = ({ onImageUploaded }) => {
+const ImageUpload = ({ onImageUploaded }) => { // Панель для загрузки фото на сайт
   const [isUploading, setIsUploading] = useState(false);
-  const [name, setName] = useState('');
+  const [name, setName] = useState('');     
   const [description, setDescription] = useState('');
 
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = async (event) => { // Метод для загрузки фото  
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) return;        // Валідуємо чи загружене фото , введена назва та опис
 
     if (!file.type.startsWith('image/')) {
       alert('📷 Будь ласка, оберіть файл зображення');
@@ -20,9 +20,9 @@ const ImageUpload = ({ onImageUploaded }) => {
       return;
     }
 
-    setIsUploading(true);
+    setIsUploading(true); 
     try {
-      const newImage = await Api.uploadImage(file, name, description);
+      const newImage = await PhotoApi.uploadImage(file, name, description);  // Відправляємо дані на апі
       onImageUploaded(newImage);
       event.target.value = '';
       setName('');

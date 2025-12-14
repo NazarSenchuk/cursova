@@ -24,7 +24,6 @@ public:
     crow::response getImageById(const crow::request& req, int id);
     crow::response getImagesByStatus(const crow::request& req ,  const std::string& status);
     crow::response deleteImage(const crow::request& req, int id);
-    crow::response getStats(const crow::request& req);
     
 };
 
